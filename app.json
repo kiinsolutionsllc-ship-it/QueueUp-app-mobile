@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "my-app-mobile",
+    "slug": "my-app-mobile",
+    "version": "1.0.0",
+    "sdkVersion": "51.0.0",
+    "extra": {
+      "API_URL": process.env.API_URL
+    }
+  }
+}
