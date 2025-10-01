@@ -13,11 +13,11 @@
 export const calculateTotalJobCost = (job: any): number => {
   if (!job) return 0;
   
-  // Try multiple possible cost fields
-  const originalCost = job.estimatedCost || job.price || job.amount || job.cost || 0;
+  // Try multiple possible cost fields - prioritize accepted bid price
+  const acceptedBidPrice = job.price || job.estimatedCost || job.amount || job.cost || 0;
   const additionalWorkAmount = job.additionalWorkAmount || 0;
   
-  return originalCost + additionalWorkAmount;
+  return acceptedBidPrice + additionalWorkAmount;
 };
 
 /**
@@ -29,13 +29,22 @@ export const calculateTotalJobCost = (job: any): number => {
 export const formatJobCost = (job: any, showBreakdown: boolean = false): string => {
   if (!job) return 'TBD';
   
-  // Try multiple possible cost fields
-  const originalCost = job.estimatedCost || job.price || job.amount || job.cost || 0;
+  // Try multiple possible cost fields - prioritize accepted bid price
+  const acceptedBidPrice = job.price || job.estimatedCost || job.amount || job.cost || 0;
   const additionalWorkAmount = job.additionalWorkAmount || 0;
-  const totalCost = originalCost + additionalWorkAmount;
+  const totalCost = acceptedBidPrice + additionalWorkAmount;
   
+  // If job has been accepted and we have a price, show it
+  if (job.status === 'accepted' && acceptedBidPrice > 0) {
+    if (additionalWorkAmount > 0 && showBreakdown) {
+      return `$${totalCost.toFixed(2)} ($${acceptedBidPrice.toFixed(2)} + $${additionalWorkAmount.toFixed(2)})`;
+    }
+    return `$${acceptedBidPrice.toFixed(2)}`;
+  }
+  
+  // For jobs that haven't been accepted yet, show estimated cost
   if (additionalWorkAmount > 0 && showBreakdown) {
-    return `$${totalCost.toFixed(2)} ($${originalCost.toFixed(2)} + $${additionalWorkAmount.toFixed(2)})`;
+    return `$${totalCost.toFixed(2)} ($${acceptedBidPrice.toFixed(2)} + $${additionalWorkAmount.toFixed(2)})`;
   }
   
   // If we have any cost information, show it
@@ -67,13 +76,13 @@ export const getJobCostBreakdown = (job: any) => {
     };
   }
   
-  // Try multiple possible cost fields
-  const originalCost = job.estimatedCost || job.price || job.amount || job.cost || 0;
+  // Try multiple possible cost fields - prioritize accepted bid price
+  const acceptedBidPrice = job.price || job.estimatedCost || job.amount || job.cost || 0;
   const additionalWorkAmount = job.additionalWorkAmount || 0;
-  const totalCost = originalCost + additionalWorkAmount;
+  const totalCost = acceptedBidPrice + additionalWorkAmount;
   
   return {
-    originalCost,
+    originalCost: acceptedBidPrice,
     additionalWorkAmount,
     totalCost,
     hasAdditionalWork: additionalWorkAmount > 0

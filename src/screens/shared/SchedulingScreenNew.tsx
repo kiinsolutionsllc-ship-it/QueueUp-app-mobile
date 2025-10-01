@@ -126,7 +126,6 @@ const SchedulingScreenNew = ({ navigation, route }) => {
       const result = await scheduleJob(job.id, scheduleData);
       
       if (result.success) {
-
         await hapticService.success();
         
         Alert.alert(
@@ -142,11 +141,17 @@ const SchedulingScreenNew = ({ navigation, route }) => {
           ]
         );
       } else {
-        throw new Error(result.error || 'Failed to schedule job');
+        // Provide more specific error messages
+        const errorMessage = result.error === 'Job not found' 
+          ? 'Job data is not available. Please go back and try again, or refresh the job list.'
+          : result.error || 'Failed to schedule job';
+        
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('Error scheduling job:', error);
-      Alert.alert('Error', 'Failed to schedule job. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to schedule job. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsScheduling(false);
     }

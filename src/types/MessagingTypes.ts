@@ -1,4 +1,3 @@
-import { ReactNode } from 'react';
 import { ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { NavigationProp, RouteProp } from '@react-navigation/native';
 

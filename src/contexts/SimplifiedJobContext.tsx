@@ -110,6 +110,7 @@ export interface JobContextType {
   rejectBid: (bidId: string) => Promise<any>;
   getBidsByMechanic: (mechanicId: string) => Bid[];
   getBidsByJob: (jobId: string) => Bid[];
+  getAcceptedBid: (jobId: string) => Bid | null;
   
   // Scheduling operations
   scheduleJob: (jobId: string, scheduleData: any) => Promise<any>;
@@ -335,9 +336,24 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
     return UnifiedJobService.getBidsByJob(jobId);
   };
 
+  const getAcceptedBid = (jobId: string): Bid | null => {
+    return UnifiedJobService.getAcceptedBid(jobId);
+  };
+
   // Scheduling operations
   const scheduleJob = async (jobId: string, scheduleData: any): Promise<any> => {
     try {
+      // Ensure UnifiedJobService is up to date before scheduling
+      await UnifiedJobService.refresh();
+      
+      // Check if job exists in UnifiedJobService
+      const job = UnifiedJobService.getJob(jobId);
+      if (!job) {
+        console.error('SimplifiedJobContext: Job not found in UnifiedJobService:', jobId);
+        console.log('SimplifiedJobContext: Available jobs:', UnifiedJobService.getAllJobs().map(j => ({ id: j.id, title: j.title })));
+        return { success: false, error: 'Job not found. Please refresh and try again.' };
+      }
+      
       const result = await UnifiedJobService.scheduleJob(jobId, scheduleData);
       if (result.success) {
         await refreshData();
@@ -414,6 +430,7 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
     rejectBid,
     getBidsByMechanic,
     getBidsByJob,
+    getAcceptedBid,
     
     // Scheduling operations
     scheduleJob,

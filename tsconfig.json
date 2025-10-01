@@ -50,7 +50,8 @@
     "**/*.test.js",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "node_modules/typescript/lib/lib.dom.d.ts"
+    "node_modules/typescript/lib/lib.dom.d.ts",
+    "src/screens/archive/**/*"
   ]
 }
 

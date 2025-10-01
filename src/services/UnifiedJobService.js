@@ -928,6 +928,9 @@ class UnifiedJobService {
     job.status = 'accepted';
     job.selectedMechanicId = bid.mechanicId;
     job.acceptedBidId = bid.id;
+    // Update job price to reflect the accepted bid amount
+    job.price = bid.price || bid.amount;
+    job.estimatedCost = bid.price || bid.amount;
     job.updatedAt = new Date().toISOString();
     
     // Add bid acceptance to progression timeline
@@ -1000,8 +1003,15 @@ class UnifiedJobService {
 
   // Scheduling operations
   async scheduleJob(jobId, scheduleData) {
+    // Ensure we have the latest data before scheduling
+    if (!this.initialized) {
+      await this.initialize();
+    }
+    
     const job = this.jobs.find(j => j.id === jobId);
     if (!job) {
+      console.error('UnifiedJobService: Job not found for scheduling:', jobId);
+      console.log('UnifiedJobService: Available jobs:', this.jobs.map(j => ({ id: j.id, title: j.title, status: j.status })));
       return { success: false, error: 'Job not found' };
     }
 
@@ -1261,6 +1271,12 @@ class UnifiedJobService {
 
   getBidsByJob(jobId) {
     return this.bids.filter(bid => bid.jobId === jobId);
+  }
+
+  getAcceptedBid(jobId) {
+    const job = this.jobs.find(j => j.id === jobId);
+    if (!job || !job.acceptedBidId) return null;
+    return this.bids.find(bid => bid.id === job.acceptedBidId);
   }
 
   // Change Order Operations

@@ -53,7 +53,9 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
       if (!jobId) return;
       try {
         await refreshData();
-      } catch (_) {}
+      } catch (error) {
+        console.warn('Failed to refresh job data:', error);
+      }
       if (!isMounted) return;
       const actualJob = getJob ? getJob(jobId) : null;
       if (actualJob) {
