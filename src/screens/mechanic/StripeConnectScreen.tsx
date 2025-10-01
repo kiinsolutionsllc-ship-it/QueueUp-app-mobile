@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
-import { PaymentService } from '../../services/PaymentService';
+import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { STRIPE_CONFIG, MOCK_MODE } from '../../config/payment';
 
 
@@ -26,7 +26,7 @@ export default function StripeConnectScreen({ navigation }: StripeConnectScreenP
   const { user } = useAuth();
   const theme = getCurrentTheme();
 
-  const paymentService = new PaymentService();
+  // Use merged payment service (singleton)
   const [isConnected, setIsConnected] = useState<any>(false);
   const [isLoading, setIsLoading] = useState<any>(false);
   const [stripeAccount, setStripeAccount] = useState<any>(null);

@@ -61,7 +61,7 @@ export default function DatabaseDebugScreen({ navigation }: DatabaseDebugScreenP
         Alert.alert('Error', 'Failed to create test job');
       }
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -81,7 +81,7 @@ export default function DatabaseDebugScreen({ navigation }: DatabaseDebugScreenP
         Alert.alert('Error', 'Failed to create test message');
       }
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
@@ -136,7 +136,7 @@ export default function DatabaseDebugScreen({ navigation }: DatabaseDebugScreenP
       console.log('Exported data:', data);
       Alert.alert('Success', 'Data exported to console. Check the logs.');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 

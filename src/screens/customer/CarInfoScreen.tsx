@@ -456,9 +456,241 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
 
   // Dynamic trim levels based on make/model/year
   const getTrimLevels = (make, model, year) => {
+    // Year-specific trims database (incrementally extendable)
+    const trimsByYear = {
+      'Acura': {
+        'Integra': {
+          // Classic era (1994-2001)
+          1994: ['LS', 'GS', 'GS-R'],
+          1995: ['LS', 'GS', 'GS-R'],
+          1996: ['LS', 'GS', 'GS-R'],
+          1997: ['LS', 'GS', 'GS-R', 'Type R'],
+          1998: ['LS', 'GS', 'GS-R', 'Type R'],
+          1999: ['LS', 'GS', 'GS-R', 'Type R'],
+          2000: ['LS', 'GS', 'GS-R', 'Type R'],
+          2001: ['LS', 'GS', 'GS-R', 'Type R'],
+          // Modern era (2022+)
+          2022: ['Base', 'A-Spec', 'A-Spec Tech', 'Type S'],
+          2023: ['Base', 'A-Spec', 'A-Spec Tech', 'Type S'],
+          2024: ['Base', 'A-Spec', 'A-Spec Tech', 'Type S'],
+          2025: ['Base', 'A-Spec', 'A-Spec Tech', 'Type S'],
+        },
+        'TL': {
+          2004: ['Base', 'Type-S'],
+          2005: ['Base', 'Type-S'],
+          2006: ['Base', 'Type-S'],
+          2007: ['Base', 'Type-S'],
+          2008: ['Base', 'Type-S'],
+          2009: ['Base', 'Type-S'],
+          2010: ['Base', 'Type-S'],
+          2011: ['Base', 'Type-S'],
+          2012: ['Base', 'Type-S'],
+          2013: ['Base', 'Type-S'],
+          2014: ['Base', 'Type-S'],
+          2015: ['Base', 'Type-S'],
+          2016: ['Base', 'Type-S'],
+          2017: ['Base', 'Type-S'],
+          2018: ['Base', 'Type-S'],
+          2019: ['Base', 'Type-S'],
+          2020: ['Base', 'Type-S'],
+          2021: ['Base', 'Type-S'],
+          2022: ['Base', 'Type-S'],
+          2023: ['Base', 'Type-S'],
+          2024: ['Base', 'Type-S'],
+          2025: ['Base', 'Type-S'],
+        },
+        'TSX': {
+          2004: ['Base', 'Type-S'],
+          2005: ['Base', 'Type-S'],
+          2006: ['Base', 'Type-S'],
+          2007: ['Base', 'Type-S'],
+          2008: ['Base', 'Type-S'],
+          2009: ['Base', 'Type-S'],
+          2010: ['Base', 'Type-S'],
+          2011: ['Base', 'Type-S'],
+          2012: ['Base', 'Type-S'],
+          2013: ['Base', 'Type-S'],
+          2014: ['Base', 'Type-S'],
+        },
+        'ILX': {
+          2013: ['Base', 'Premium', 'Technology'],
+          2014: ['Base', 'Premium', 'Technology'],
+          2015: ['Base', 'Premium', 'Technology'],
+          2016: ['Base', 'Premium', 'Technology'],
+          2017: ['Base', 'Premium', 'Technology'],
+          2018: ['Base', 'Premium', 'Technology'],
+          2019: ['Base', 'Premium', 'Technology'],
+          2020: ['Base', 'Premium', 'Technology'],
+          2021: ['Base', 'Premium', 'Technology'],
+          2022: ['Base', 'Premium', 'Technology'],
+          2023: ['Base', 'Premium', 'Technology'],
+          2024: ['Base', 'Premium', 'Technology'],
+          2025: ['Base', 'Premium', 'Technology'],
+        },
+        'RL': {
+          2005: ['Base', 'Technology'],
+          2006: ['Base', 'Technology'],
+          2007: ['Base', 'Technology'],
+          2008: ['Base', 'Technology'],
+          2009: ['Base', 'Technology'],
+          2010: ['Base', 'Technology'],
+          2011: ['Base', 'Technology'],
+          2012: ['Base', 'Technology'],
+          2013: ['Base', 'Technology'],
+          2014: ['Base', 'Technology'],
+          2015: ['Base', 'Technology'],
+          2016: ['Base', 'Technology'],
+          2017: ['Base', 'Technology'],
+          2018: ['Base', 'Technology'],
+          2019: ['Base', 'Technology'],
+          2020: ['Base', 'Technology'],
+          2021: ['Base', 'Technology'],
+          2022: ['Base', 'Technology'],
+          2023: ['Base', 'Technology'],
+          2024: ['Base', 'Technology'],
+          2025: ['Base', 'Technology'],
+        },
+        'RLX': {
+          2014: ['Base', 'Technology', 'Advance'],
+          2015: ['Base', 'Technology', 'Advance'],
+          2016: ['Base', 'Technology', 'Advance'],
+          2017: ['Base', 'Technology', 'Advance'],
+          2018: ['Base', 'Technology', 'Advance'],
+          2019: ['Base', 'Technology', 'Advance'],
+          2020: ['Base', 'Technology', 'Advance'],
+          2021: ['Base', 'Technology', 'Advance'],
+          2022: ['Base', 'Technology', 'Advance'],
+          2023: ['Base', 'Technology', 'Advance'],
+          2024: ['Base', 'Technology', 'Advance'],
+          2025: ['Base', 'Technology', 'Advance'],
+        },
+        'MDX': {
+          2001: ['Base', 'Touring'],
+          2002: ['Base', 'Touring'],
+          2003: ['Base', 'Touring'],
+          2004: ['Base', 'Touring'],
+          2005: ['Base', 'Touring'],
+          2006: ['Base', 'Touring'],
+          2007: ['Base', 'Touring'],
+          2008: ['Base', 'Touring'],
+          2009: ['Base', 'Touring'],
+          2010: ['Base', 'Touring'],
+          2011: ['Base', 'Touring'],
+          2012: ['Base', 'Touring'],
+          2013: ['Base', 'Touring'],
+          2014: ['Base', 'Touring'],
+          2015: ['Base', 'Touring'],
+          2016: ['Base', 'Touring'],
+          2017: ['Base', 'Touring'],
+          2018: ['Base', 'Touring'],
+          2019: ['Base', 'Touring'],
+          2020: ['Base', 'Touring'],
+          2021: ['Base', 'Touring'],
+          2022: ['Base', 'Touring'],
+          2023: ['Base', 'Touring'],
+          2024: ['Base', 'Touring'],
+          2025: ['Base', 'Touring'],
+        },
+        'RDX': {
+          2007: ['Base', 'Technology'],
+          2008: ['Base', 'Technology'],
+          2009: ['Base', 'Technology'],
+          2010: ['Base', 'Technology'],
+          2011: ['Base', 'Technology'],
+          2012: ['Base', 'Technology'],
+          2013: ['Base', 'Technology'],
+          2014: ['Base', 'Technology'],
+          2015: ['Base', 'Technology'],
+          2016: ['Base', 'Technology'],
+          2017: ['Base', 'Technology'],
+          2018: ['Base', 'Technology'],
+          2019: ['Base', 'Technology'],
+          2020: ['Base', 'Technology'],
+          2021: ['Base', 'Technology'],
+          2022: ['Base', 'Technology'],
+          2023: ['Base', 'Technology'],
+          2024: ['Base', 'Technology'],
+          2025: ['Base', 'Technology'],
+        },
+        'NSX': {
+          1991: ['Base'],
+          1992: ['Base'],
+          1993: ['Base'],
+          1994: ['Base'],
+          1995: ['Base'],
+          1996: ['Base'],
+          1997: ['Base'],
+          1998: ['Base'],
+          1999: ['Base'],
+          2000: ['Base'],
+          2001: ['Base'],
+          2002: ['Base'],
+          2003: ['Base'],
+          2004: ['Base'],
+          2005: ['Base'],
+          2017: ['Base', 'Technology'],
+          2018: ['Base', 'Technology'],
+          2019: ['Base', 'Technology'],
+          2020: ['Base', 'Technology'],
+          2021: ['Base', 'Technology'],
+          2022: ['Base', 'Technology'],
+          2023: ['Base', 'Technology'],
+          2024: ['Base', 'Technology'],
+          2025: ['Base', 'Technology'],
+        },
+        'RSX': {
+          2002: ['Base', 'Type-S'],
+          2003: ['Base', 'Type-S'],
+          2004: ['Base', 'Type-S'],
+          2005: ['Base', 'Type-S'],
+          2006: ['Base', 'Type-S'],
+        },
+        'CL': {
+          1997: ['Base', 'Type-S'],
+          1998: ['Base', 'Type-S'],
+          1999: ['Base', 'Type-S'],
+          2000: ['Base', 'Type-S'],
+          2001: ['Base', 'Type-S'],
+          2002: ['Base', 'Type-S'],
+          2003: ['Base', 'Type-S'],
+        },
+        'TLX': {
+          2015: ['Base', 'Technology', 'Advance'],
+          2016: ['Base', 'Technology', 'Advance'],
+          2017: ['Base', 'Technology', 'Advance'],
+          2018: ['Base', 'Technology', 'Advance'],
+          2019: ['Base', 'Technology', 'Advance'],
+          2020: ['Base', 'Technology', 'Advance'],
+          2021: ['Base', 'Technology', 'Advance'],
+          2022: ['Base', 'Technology', 'Advance'],
+          2023: ['Base', 'Technology', 'Advance'],
+          2024: ['Base', 'Technology', 'Advance'],
+          2025: ['Base', 'Technology', 'Advance'],
+        },
+        'ZDX': {
+          2010: ['Base', 'Technology', 'Advance'],
+          2011: ['Base', 'Technology', 'Advance'],
+          2012: ['Base', 'Technology', 'Advance'],
+          2013: ['Base', 'Technology', 'Advance'],
+        },
+      },
+    } as any;
+
+    const normalizedYear = typeof year === 'string' ? parseInt(year, 10) : year;
+
+    // If we have exact year-specific trims, return those
+    if (
+      normalizedYear &&
+      trimsByYear[make] &&
+      trimsByYear[make][model] &&
+      trimsByYear[make][model][normalizedYear]
+    ) {
+      return trimsByYear[make][model][normalizedYear].slice().sort((a: string, b: string) => a.localeCompare(b));
+    }
+    
     // Test with Honda CR-V to verify the system works
     if (make === 'Honda' && model === 'CR-V') {
-      return ['LX', 'EX', 'EX-L', 'Touring', 'Hybrid'];
+      return ['EX', 'EX-L', 'Hybrid', 'LX', 'Touring'].slice().sort((a, b) => a.localeCompare(b));
     }
     
     // Common trim patterns by manufacturer
@@ -564,7 +796,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
         'Frontier': ['S', 'SV', 'Pro-4X', 'SL'],
         'Titan': ['S', 'SV', 'Pro-4X', 'SL', 'Platinum Reserve'],
         '370Z': ['Sport', 'Touring', 'Nismo'],
-        'GT-R': ['Premium', 'Track Edition', 'Nismo'],
+        'GT-R': ['Premium,', 'Track Edition', 'Nismo'],
         'Leaf': ['S', 'SV', 'SL', 'SV Plus', 'SL Plus'],
         'Versa': ['S', 'SV'],
         'Juke': ['S', 'SV', 'SL', 'Nismo RS']
@@ -691,11 +923,13 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
 
     // Get trims for specific make/model combination
     if (trimPatterns[make] && trimPatterns[make][model]) {
-      return trimPatterns[make][model];
+      return trimPatterns[make][model].slice().sort((a, b) => a.localeCompare(b));
     }
 
     // Fallback to common trims
-    return ['Base', 'LE', 'SE', 'XLE', 'Limited', 'Sport', 'Premium', 'Luxury', 'Touring', 'Platinum', 'Hybrid', 'Other'];
+    return ['Base', 'Hybrid', 'LE', 'Limited', 'Luxury', 'Platinum', 'Premium', 'SE', 'Sport', 'Touring', 'XLE', 'Other']
+      .slice()
+      .sort((a, b) => a.localeCompare(b));
   };
 
   // Dynamic engine types based on make/model/year
@@ -884,7 +1118,35 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     return ['Gasoline', 'Diesel', 'Hybrid', 'Electric', 'E85', 'LPG', 'Other'];
   };
 
-  // Model year ranges for each make/model combination
+  // Available years (2000-2024)
+  const availableYears = [
+    ...Array.from({ length: 26 }, (_, i) => 2025 - i),
+    'Other (before 2000)'
+  ];
+
+  // Generate makes available by year (simplified - all makes available for all years)
+  const getMakesByYear = (year) => {
+    return ['Toyota', 'Honda', 'Ford', 'BMW', 'Tesla', 'Chevrolet', 'Nissan', 'Hyundai', 'Kia', 'Audi', 'Mercedes-Benz', 'Lexus', 'Volkswagen', 'Mazda', 'Subaru', 'Acura']
+      .slice()
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  // Get models by year and make (simplified - use existing carModels data)
+  const getModelsByYearAndMake = (year, make) => {
+    if (!year || !make) return [];
+    const modelsForMake = carModels[make] || [];
+
+    // If we have year ranges per model, filter accordingly; otherwise return all
+    const availableForYear = modelsForMake.filter((model) => {
+      const makeYears = modelYears[make];
+      if (!makeYears || !makeYears[model]) return true;
+      return makeYears[model].includes(Number(year));
+    });
+
+    return availableForYear.slice().sort((a, b) => a.localeCompare(b));
+  };
+
+  // Model year ranges for each make/model combination (keeping for backward compatibility)
   const modelYears = {
     'Toyota': {
       'Camry': Array.from({length: 25}, (_, i) => 2024 - i), // 2000-2024
@@ -960,161 +1222,14 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
       'Cybertruck': Array.from({length: 1}, (_, i) => 2024 - i), // 2024
       'Semi': Array.from({length: 3}, (_, i) => 2024 - i), // 2022-2024
     },
-    // Add more makes as needed - this is a sample implementation
-    'Chevrolet': {
-      'Silverado': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Equinox': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Traverse': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Tahoe': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Suburban': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Malibu': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Cruze': Array.from({length: 10}, (_, i) => 2019 - i),
-      'Camaro': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Corvette': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Colorado': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Blazer': Array.from({length: 6}, (_, i) => 2024 - i),
-      'Trax': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Sonic': Array.from({length: 10}, (_, i) => 2020 - i),
-      'Impala': Array.from({length: 15}, (_, i) => 2020 - i),
-    },
-    'Mercedes-Benz': {
-      'C-Class': Array.from({length: 25}, (_, i) => 2024 - i),
-      'E-Class': Array.from({length: 25}, (_, i) => 2024 - i),
-      'S-Class': Array.from({length: 25}, (_, i) => 2024 - i),
-      'A-Class': Array.from({length: 10}, (_, i) => 2024 - i),
-      'GLA': Array.from({length: 10}, (_, i) => 2024 - i),
-      'GLC': Array.from({length: 10}, (_, i) => 2024 - i),
-      'GLE': Array.from({length: 15}, (_, i) => 2024 - i),
-      'GLS': Array.from({length: 15}, (_, i) => 2024 - i),
-      'G-Class': Array.from({length: 25}, (_, i) => 2024 - i),
-      'CLA': Array.from({length: 10}, (_, i) => 2024 - i),
-      'CLS': Array.from({length: 15}, (_, i) => 2024 - i),
-      'SL': Array.from({length: 25}, (_, i) => 2024 - i),
-      'AMG GT': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Sprinter': Array.from({length: 25}, (_, i) => 2024 - i),
-    },
-    'Audi': {
-      'A3': Array.from({length: 20}, (_, i) => 2024 - i),
-      'A4': Array.from({length: 25}, (_, i) => 2024 - i),
-      'A6': Array.from({length: 25}, (_, i) => 2024 - i),
-      'A8': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Q3': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Q5': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Q7': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Q8': Array.from({length: 6}, (_, i) => 2024 - i),
-      'TT': Array.from({length: 20}, (_, i) => 2024 - i),
-      'R8': Array.from({length: 15}, (_, i) => 2024 - i),
-      'e-tron': Array.from({length: 6}, (_, i) => 2024 - i),
-      'RS3': Array.from({length: 10}, (_, i) => 2024 - i),
-      'RS4': Array.from({length: 15}, (_, i) => 2024 - i),
-      'RS6': Array.from({length: 15}, (_, i) => 2024 - i),
-      'RS7': Array.from({length: 10}, (_, i) => 2024 - i),
-    },
-    'Nissan': {
-      'Altima': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Sentra': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Maxima': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Rogue': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Murano': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Pathfinder': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Armada': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Frontier': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Titan': Array.from({length: 20}, (_, i) => 2024 - i),
-      '370Z': Array.from({length: 15}, (_, i) => 2020 - i),
-      'GT-R': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Leaf': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Versa': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Juke': Array.from({length: 8}, (_, i) => 2019 - i),
-    },
-    'Hyundai': {
-      'Elantra': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Sonata': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Tucson': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Santa Fe': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Palisade': Array.from({length: 6}, (_, i) => 2024 - i),
-      'Kona': Array.from({length: 7}, (_, i) => 2024 - i),
-      'Veloster': Array.from({length: 10}, (_, i) => 2021 - i),
-      'Genesis': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Accent': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Ioniq': Array.from({length: 8}, (_, i) => 2024 - i),
-      'Nexo': Array.from({length: 6}, (_, i) => 2024 - i),
-      'Venue': Array.from({length: 5}, (_, i) => 2024 - i),
-    },
-    'Kia': {
-      'Forte': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Optima': Array.from({length: 15}, (_, i) => 2020 - i),
-      'Sorento': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Telluride': Array.from({length: 6}, (_, i) => 2024 - i),
-      'Sportage': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Soul': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Stinger': Array.from({length: 7}, (_, i) => 2024 - i),
-      'Niro': Array.from({length: 8}, (_, i) => 2024 - i),
-      'Sedona': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Rio': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Cadenza': Array.from({length: 8}, (_, i) => 2020 - i),
-      'K900': Array.from({length: 8}, (_, i) => 2020 - i),
-    },
-    'Volkswagen': {
-      'Jetta': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Passat': Array.from({length: 20}, (_, i) => 2022 - i),
-      'Golf': Array.from({length: 20}, (_, i) => 2021 - i),
-      'Tiguan': Array.from({length: 15}, (_, i) => 2024 - i),
-      'Atlas': Array.from({length: 7}, (_, i) => 2024 - i),
-      'Beetle': Array.from({length: 20}, (_, i) => 2019 - i),
-      'CC': Array.from({length: 10}, (_, i) => 2017 - i),
-      'Arteon': Array.from({length: 6}, (_, i) => 2024 - i),
-      'ID.4': Array.from({length: 4}, (_, i) => 2024 - i),
-      'Touareg': Array.from({length: 20}, (_, i) => 2024 - i),
-      'GTI': Array.from({length: 20}, (_, i) => 2024 - i),
-      'GLI': Array.from({length: 15}, (_, i) => 2024 - i),
-      'R32': Array.from({length: 5}, (_, i) => 2008 - i),
-    },
-    'Mazda': {
-      'Mazda3': Array.from({length: 20}, (_, i) => 2024 - i),
-      'Mazda6': Array.from({length: 15}, (_, i) => 2021 - i),
-      'CX-3': Array.from({length: 8}, (_, i) => 2021 - i),
-      'CX-5': Array.from({length: 12}, (_, i) => 2024 - i),
-      'CX-9': Array.from({length: 15}, (_, i) => 2024 - i),
-      'MX-5 Miata': Array.from({length: 25}, (_, i) => 2024 - i),
-      'CX-30': Array.from({length: 5}, (_, i) => 2024 - i),
-      'Mazda2': Array.from({length: 10}, (_, i) => 2014 - i),
-      'RX-7': Array.from({length: 15}, (_, i) => 2002 - i),
-      'RX-8': Array.from({length: 8}, (_, i) => 2011 - i),
-      'Tribute': Array.from({length: 10}, (_, i) => 2011 - i),
-      'MPV': Array.from({length: 10}, (_, i) => 2006 - i),
-    },
-    'Subaru': {
-      'Impreza': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Legacy': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Outback': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Forester': Array.from({length: 25}, (_, i) => 2024 - i),
-      'Ascent': Array.from({length: 6}, (_, i) => 2024 - i),
-      'WRX': Array.from({length: 20}, (_, i) => 2024 - i),
-      'BRZ': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Crosstrek': Array.from({length: 10}, (_, i) => 2024 - i),
-      'Tribeca': Array.from({length: 8}, (_, i) => 2014 - i),
-      'Baja': Array.from({length: 5}, (_, i) => 2006 - i),
-      'SVX': Array.from({length: 5}, (_, i) => 1997 - i),
-    },
-    'Lexus': {
-      'ES': Array.from({length: 25}, (_, i) => 2024 - i),
-      'IS': Array.from({length: 20}, (_, i) => 2024 - i),
-      'GS': Array.from({length: 15}, (_, i) => 2020 - i),
-      'LS': Array.from({length: 25}, (_, i) => 2024 - i),
-      'RX': Array.from({length: 25}, (_, i) => 2024 - i),
-      'GX': Array.from({length: 20}, (_, i) => 2024 - i),
-      'LX': Array.from({length: 25}, (_, i) => 2024 - i),
-      'NX': Array.from({length: 10}, (_, i) => 2024 - i),
-      'UX': Array.from({length: 6}, (_, i) => 2024 - i),
-      'LC': Array.from({length: 8}, (_, i) => 2024 - i),
-      'RC': Array.from({length: 10}, (_, i) => 2024 - i),
-      'CT': Array.from({length: 10}, (_, i) => 2022 - i),
-      'SC': Array.from({length: 10}, (_, i) => 2010 - i),
-      'HS': Array.from({length: 5}, (_, i) => 2012 - i),
-    },
     'Acura': {
       'ILX': Array.from({length: 12}, (_, i) => 2024 - i),
-      'Integra': Array.from({length: 40}, (_, i) => 2024 - i), // 1985-2024 (includes 1986-2001, 2002-2006 as RSX, 2023-present)
+      'Integra': [
+        // 1986-2001
+        ...Array.from({ length: 16 }, (_, i) => 2001 - i),
+        // 2023-2024
+        2024, 2023
+      ],
       'Legend': Array.from({length: 10}, (_, i) => 1995 - i),
       'MDX': Array.from({length: 20}, (_, i) => 2024 - i),
       'NSX': Array.from({length: 10}, (_, i) => 2022 - i),
@@ -1251,10 +1366,21 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     setCarInfo(prev => {
       const newCarInfo = { ...prev, [field]: value };
       
-      // If make is changed, clear all dependent fields
+      // If year is changed, clear all dependent fields
+      if (field === 'year') {
+        newCarInfo.make = '';
+        newCarInfo.model = '';
+        newCarInfo.trim = '';
+        newCarInfo.bodyStyle = '';
+        newCarInfo.drivetrain = '';
+        newCarInfo.engineType = '';
+        newCarInfo.transmission = '';
+        newCarInfo.fuelType = '';
+      }
+      
+      // If make is changed, clear dependent fields
       if (field === 'make') {
         newCarInfo.model = '';
-        newCarInfo.year = '';
         newCarInfo.trim = '';
         newCarInfo.bodyStyle = '';
         newCarInfo.drivetrain = '';
@@ -1265,17 +1391,6 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
       
       // If model is changed, clear dependent fields
       if (field === 'model') {
-        newCarInfo.year = '';
-        newCarInfo.trim = '';
-        newCarInfo.bodyStyle = '';
-        newCarInfo.drivetrain = '';
-        newCarInfo.engineType = '';
-        newCarInfo.transmission = '';
-        newCarInfo.fuelType = '';
-      }
-      
-      // If year is changed, clear dependent fields
-      if (field === 'year') {
         newCarInfo.trim = '';
         newCarInfo.bodyStyle = '';
         newCarInfo.drivetrain = '';
@@ -1300,24 +1415,28 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   const openDropdownModal = (field, options, placeholder) => {
     setCurrentField(field);
     
-    // If it's the model field, get models based on selected make
-    if (field === 'model') {
-      const selectedMake = carInfo.make;
-      if (selectedMake && carModels[selectedMake]) {
-        setCurrentOptions(carModels[selectedMake]);
+    // If it's the year field, show all available years
+    if (field === 'year') {
+      setCurrentOptions(availableYears);
+    }
+    // If it's the make field, get makes based on selected year
+    else if (field === 'make') {
+      const selectedYear = carInfo.year;
+      if (selectedYear) {
+        setCurrentOptions(getMakesByYear(selectedYear));
       } else {
-        setCurrentOptions(['Please select a make first']);
+        setCurrentOptions(['Please select a year first']);
       }
     } 
-    // If it's the year field, get years based on selected make and model
-    else if (field === 'year') {
+    // If it's the model field, get models based on selected year and make
+    else if (field === 'model') {
+      const selectedYear = carInfo.year;
       const selectedMake = carInfo.make;
-      const selectedModel = carInfo.model;
       
-      if (selectedMake && selectedModel && modelYears[selectedMake] && modelYears[selectedMake][selectedModel]) {
-        setCurrentOptions(modelYears[selectedMake][selectedModel]);
+      if (selectedYear && selectedMake) {
+        setCurrentOptions(getModelsByYearAndMake(selectedYear, selectedMake));
       } else {
-        setCurrentOptions(['Please select make and model first']);
+        setCurrentOptions(['Please select year and make first']);
       }
     }
     // If it's the trim field, get trims based on selected make, model, and year
@@ -1413,12 +1532,31 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
         option === 'Please select make and model first') {
       return;
     }
+    // If selecting 'Other' for year, open numeric input instead of setting directly
+    if (currentField === 'year' && typeof option === 'string' && option.toLowerCase().includes('other')) {
+      setShowDropdownModal(false);
+      openTextInputModal('year', 'Year (before 2000)');
+      return;
+    }
     
     handleInputChange(currentField, option);
     setShowDropdownModal(false);
   };
 
   const handleTextInputSave = () => {
+    // Validate custom year input
+    if (currentField === 'year') {
+      const parsed = parseInt(inputValue, 10);
+      if (isNaN(parsed) || parsed > 1999 || parsed < 1900) {
+        Alert.alert('Invalid Year', 'Please enter a year between 1900 and 1999.');
+        return;
+      }
+      handleInputChange('year', String(parsed));
+      setShowTextInputModal(false);
+      setShowDropdownModal(false);
+      return;
+    }
+
     handleInputChange(currentField, inputValue);
     setShowTextInputModal(false);
   };
@@ -1475,27 +1613,32 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     let displayText = carInfo[field] || `Select ${placeholder}`;
     let isDisabled = false;
     
-    // Special handling for model field
-    if (field === 'model' && !carInfo.make) {
-      displayText = 'Select Make first';
-      isDisabled = true;
-    } else if (field === 'model' && carInfo.make && !carInfo.model) {
-      displayText = 'Select Model';
-    }
-    
     // Special handling for year field
-    if (field === 'year' && (!carInfo.make || !carInfo.model)) {
-      displayText = 'Select Make and Model first';
-      isDisabled = true;
-    } else if (field === 'year' && carInfo.make && carInfo.model && !carInfo.year) {
+    if (field === 'year' && !carInfo.year) {
       displayText = 'Select Year';
     }
     
-    // Special handling for trim field
-    if (field === 'trim' && (!carInfo.make || !carInfo.model)) {
-      displayText = 'Select Make and Model first';
+    // Special handling for make field
+    if (field === 'make' && !carInfo.year) {
+      displayText = 'Select Year first';
       isDisabled = true;
-    } else if (field === 'trim' && carInfo.make && carInfo.model && !carInfo.trim) {
+    } else if (field === 'make' && carInfo.year && !carInfo.make) {
+      displayText = 'Select Make';
+    }
+    
+    // Special handling for model field
+    if (field === 'model' && (!carInfo.year || !carInfo.make)) {
+      displayText = 'Select Year and Make first';
+      isDisabled = true;
+    } else if (field === 'model' && carInfo.year && carInfo.make && !carInfo.model) {
+      displayText = 'Select Model';
+    }
+    
+    // Special handling for trim field
+    if (field === 'trim' && (!carInfo.year || !carInfo.make || !carInfo.model)) {
+      displayText = 'Select Year, Make and Model first';
+      isDisabled = true;
+    } else if (field === 'trim' && carInfo.year && carInfo.make && carInfo.model && !carInfo.trim) {
       displayText = 'Select Trim Level';
     }
     
@@ -1699,11 +1842,15 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     <View style={styles.stepContent}>
       <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
         <View style={styles.fieldRow}>
-          {renderDropdown('make', carMakes, 'Make')}
+          {renderDropdown('year', availableYears, 'Year')}
+        </View>
+        <View style={styles.fieldRow}>
+          {renderDropdown('make', [], 'Make')}
           {renderDropdown('model', [], 'Model')}
         </View>
         <View style={styles.fieldRow}>
-          {renderDropdown('year', [], 'Year')}
+          {renderDropdown('trim', getTrimLevels(carInfo.make, carInfo.model, carInfo.year), 'Trim Level')}
+          {renderTextInput('mileage', 'Current Mileage', 'numeric')}
         </View>
       </View>
       
@@ -1729,11 +1876,10 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
         
         <View style={styles.fieldRow}>
           {renderTextInput('nickname', 'Vehicle Nickname')}
-          {renderTextInput('mileage', 'Current Mileage', 'numeric')}
+          {renderTextInput('color', 'Vehicle Color')}
         </View>
         
         <View style={styles.fieldRow}>
-          {renderTextInput('color', 'Vehicle Color')}
           {renderTextInput('licensePlate', 'License Plate')}
         </View>
       </View>
@@ -1769,7 +1915,6 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
         {expandedSections.advanced && (
           <View style={styles.advancedContent}>
             <View style={styles.fieldRow}>
-              {renderDropdown('trim', getTrimLevels(carInfo.make, carInfo.model, carInfo.year), 'Trim Level')}
               {renderDropdown('drivetrain', getDrivetrains(carInfo.make, carInfo.model, carInfo.year), 'Drivetrain')}
             </View>
             <View style={styles.fieldRow}>
@@ -2002,6 +2147,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
                 multiline={currentField === 'issues' || currentField === 'serviceHistory'}
                 numberOfLines={currentField === 'issues' || currentField === 'serviceHistory' ? 4 : 1}
                 autoFocus={true}
+                keyboardType={currentField === 'year' ? 'numeric' : 'default'}
               />
             </View>
             

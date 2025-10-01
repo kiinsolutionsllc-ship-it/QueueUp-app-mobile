@@ -15,7 +15,7 @@ import { PaymentModalProps, PaymentData, PaymentResult } from '../../types/JobTy
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStripeHook } from '../../providers/StripeProvider';
-import { PaymentService } from '../../services/PaymentService';
+import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { MOCK_MODE } from '../../config/payment';
 // import { createJobStyles } from '../../styles/CreateJobScreenStyles';
 import IconFallback from '../shared/IconFallback';
@@ -35,7 +35,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   // Stripe integration
   const { user } = useAuth();
   const stripe = useStripeHook();
-  const paymentService = new PaymentService();
+  // Use merged payment service (singleton)
   
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);

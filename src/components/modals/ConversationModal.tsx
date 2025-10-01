@@ -15,9 +15,13 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
-import { ConversationModalProps, Message, User } from '../../types/MessagingTypes';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { ConversationModalProps, Message } from '../../types/MessagingTypes';
+import { User } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';
 import IconFallback from '../shared/IconFallback';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -40,6 +44,75 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Message storage key for persistence
+  const getStorageKey = (conversationId: string) => `messages_${conversationId}`;
+
+  // Send notification when message is received
+  const sendMessageNotification = useCallback(async (message: Message, conversation: any) => {
+    try {
+      // Only send notification if the modal is not visible (user is not actively viewing the conversation)
+      if (visible) return;
+
+      // Get sender name and recipient info
+      const senderName = message.senderRole === 'customer' ? 'Customer' : 'Mechanic';
+      const jobTitle = conversation.metadata?.jobTitle || 'Service Request';
+      
+      // Find the recipient (the other participant in the conversation)
+      const recipientId = conversation.participants.find((id: string) => id !== message.senderId);
+      
+      if (!recipientId) {
+        console.warn('No recipient found for message notification');
+        return;
+      }
+
+      // Import NotificationService dynamically to avoid circular dependencies
+      const NotificationService = (await import('../../services/NotificationService')).default;
+      
+      // Send in-app notification to the recipient
+      await NotificationService.createNotification({
+        userId: recipientId,
+        type: 'new_message',
+        title: `New message from ${senderName}`,
+        message: message.content,
+        jobId: conversation.jobId,
+        conversationId: conversation.id,
+        priority: 'medium',
+        actionRequired: false,
+        category: 'message',
+        data: {
+          conversationId: conversation.id,
+          jobId: conversation.jobId,
+          jobTitle: jobTitle,
+          senderId: message.senderId,
+          senderRole: message.senderRole,
+          senderName: senderName,
+          messageContent: message.content,
+        }
+      });
+
+      // Also send local push notification for immediate visibility
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `New message from ${senderName}`,
+          body: message.content,
+          data: {
+            conversationId: conversation.id,
+            jobId: conversation.jobId,
+            jobTitle: jobTitle,
+            senderId: message.senderId,
+            senderRole: message.senderRole,
+          },
+          sound: 'default',
+        },
+        trigger: null, // Show immediately
+      });
+
+      console.log('Message notification sent to recipient:', recipientId, 'Content:', message.content);
+    } catch (error) {
+      console.error('Error sending message notification:', error);
+    }
+  }, [visible]);
 
   // Refs
   const flatListRef = useRef<FlatList>(null);
@@ -83,18 +156,45 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
   useEffect(() => {
     if (conversation && visible) {
       setIsLoading(true);
-      // Load actual messages from the conversation
-      // For now, start with empty messages array
-      setTimeout(() => {
-        setMessages([]);
-        setIsLoading(false);
-        // Scroll to bottom
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }, 100);
+      
+      // Try to load persisted messages for this conversation
+      const loadPersistedMessages = async () => {
+        try {
+          // Try AsyncStorage first (persistent storage)
+          const storageKey = getStorageKey(conversation.id);
+          const storedMessages = await AsyncStorage.getItem(storageKey);
+          
+          if (storedMessages) {
+            const parsedMessages = JSON.parse(storedMessages);
+            setMessages(parsedMessages);
+          } else {
+            // Fallback to global message storage (in-memory)
+            const globalMessages = (global as any).__globalMessages?.[conversation.id] || [];
+            if (globalMessages.length > 0) {
+              setMessages(globalMessages);
+            } else {
+              // Fallback to old local storage
+              const persistedMessages = (global as any).__conversationMessages?.[storageKey] || [];
+              setMessages(persistedMessages);
+            }
+          }
+          
+          setIsLoading(false);
+          
+          // Scroll to bottom
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        } catch (error) {
+          console.error('Error loading messages:', error);
+          setMessages([]);
+          setIsLoading(false);
+        }
+      };
+      
+      loadPersistedMessages();
     }
-  }, [conversation, visible]);
+  }, [conversation?.id, visible]);
 
   // Handle sending message
   const handleSendMessage = useCallback(async () => {
@@ -112,8 +212,31 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
     };
 
     // Add message to local state
-    setMessages(prev => [...prev, message]);
+    const updatedMessages = [...messages, message];
+    setMessages(updatedMessages);
     setNewMessage('');
+
+    // Persist messages to storage
+    try {
+      const storageKey = getStorageKey(conversation.id);
+      
+      // Store in AsyncStorage (persistent storage)
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedMessages));
+      
+      // Also store in global message storage (shared between users in current session)
+      if (!(global as any).__globalMessages) {
+        (global as any).__globalMessages = {};
+      }
+      (global as any).__globalMessages[conversation.id] = updatedMessages;
+      
+      // Also store in old local storage as backup
+      if (!(global as any).__conversationMessages) {
+        (global as any).__conversationMessages = {};
+      }
+      (global as any).__conversationMessages[storageKey] = updatedMessages;
+    } catch (error) {
+      console.error('Error persisting messages:', error);
+    }
 
     // Scroll to bottom
     setTimeout(() => {
@@ -124,7 +247,12 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
 
     // Notify parent with the message content
     onMessageSent(message.content || '');
-  }, [newMessage, conversation, user, onMessageSent]);
+
+    // Send notification to the other participant
+    if (conversation) {
+      sendMessageNotification(message, conversation);
+    }
+  }, [newMessage, conversation, user, onMessageSent, sendMessageNotification]);
 
   // Handle emoji selection
   const handleEmojiSelect = useCallback((emoji: string) => {
@@ -134,7 +262,9 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
 
   // Render message bubble
   const renderMessage = useCallback(({ item }: { item: Message }) => {
-    const isMyMessage = item.senderId === (getFallbackUserIdWithTypeDetection(user?.id, user?.role as 'customer' | 'mechanic'));
+    // Use role for consistency with AuthContext
+    const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.role as 'customer' | 'mechanic');
+    const isMyMessage = item.senderId === currentUserId;
     const messageTime = new Date(item.timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
@@ -221,15 +351,20 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
+        <Animated.View
+          style={[
+            styles.container,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.surface }]}>
           <TouchableOpacity onPress={onClose} style={styles.backButton}>
@@ -243,12 +378,27 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
               </Text>
             </View>
             <View style={styles.headerText}>
-              <Text style={[styles.participantName, { color: theme.text }]}>
-                {conversation.title || conversation.metadata?.customerName || 'Customer'}
-              </Text>
-              <Text style={[styles.statusText, { color: theme.textSecondary }]}>
-                {'Offline'}
-              </Text>
+              <View style={styles.nameAndJobRow}>
+                <Text style={[styles.participantName, { color: theme.text }]}>
+                  {capitalizeText(conversation.title || conversation.metadata?.customerName || conversation.metadata?.mechanicName || 'Customer')}
+                </Text>
+                {conversation.metadata?.jobTitle && (
+                  <>
+                    <Text style={[styles.jobSeparator, { color: theme.textSecondary }]}> • </Text>
+                    <Text style={[styles.jobTitle, { color: theme.textSecondary }]}>
+                      {formatJobTitle(conversation.metadata.jobTitle)}
+                    </Text>
+                  </>
+                )}
+                {conversation.jobId && (
+                  <>
+                    <Text style={[styles.jobSeparator, { color: theme.textSecondary }]}> • </Text>
+                    <Text style={[styles.jobId, { color: theme.textSecondary }]}>
+                      #{conversation.jobId.slice(-6)}
+                    </Text>
+                  </>
+                )}
+              </View>
             </View>
           </View>
           
@@ -258,11 +408,7 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
         </View>
 
         {/* Messages */}
-        <KeyboardAvoidingView
-          style={styles.messagesContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
+        <View style={styles.messagesContainer}>
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -273,7 +419,7 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
             ListFooterComponent={renderTypingIndicator}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
-        </KeyboardAvoidingView>
+        </View>
 
         {/* Emoji Picker */}
         {renderEmojiPicker()}
@@ -318,12 +464,16 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
             />
           </TouchableOpacity>
         </View>
-      </Animated.View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const createStyles = (theme: any) => StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -365,9 +515,27 @@ const createStyles = (theme: any) => StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  nameAndJobRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   participantName: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  jobSeparator: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  jobTitle: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  jobId: {
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: 'monospace',
   },
   statusText: {
     fontSize: 12,
@@ -446,10 +614,6 @@ const createStyles = (theme: any) => StyleSheet.create({
     marginHorizontal: 2,
   },
   emojiPicker: {
-    position: 'absolute',
-    bottom: 80,
-    left: 0,
-    right: 0,
     backgroundColor: theme.surface,
     borderTopWidth: 1,
     borderTopColor: theme.border,

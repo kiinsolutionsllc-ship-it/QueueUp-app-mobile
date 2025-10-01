@@ -29,17 +29,14 @@ interface RateMechanicScreenProps {
 export default function RateMechanicScreen({ navigation, route }: RateMechanicScreenProps) {
   const { getCurrentTheme } = useTheme();
   const { jobs } = useJob();
-  const createReview = async (reviewData: any) => {
-    // Mock implementation
-    console.log('Creating review:', reviewData);
-    return { success: true };
-  };
+  const { createReview, hasUserReviewed } = useReview() as any;
   const { user } = useAuth();
   const { vehicles } = useVehicle();
   const theme = getCurrentTheme();
 
   const { jobId } = route.params || {};
   const job = jobs.find(j => j.id === jobId);
+  const alreadyReviewed = !!hasUserReviewed?.(jobId, user?.id || 'customer1', 'customer_to_mechanic');
 
   // Helper function to resolve vehicle data (handle both objects and IDs)
   const resolveVehicleData = (vehicle) => {
@@ -113,18 +110,23 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
       return;
     }
 
+    if (alreadyReviewed) {
+      Alert.alert('Already reviewed', 'You have already submitted a review for this job.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await createReview({
+      const result = await createReview?.(
         jobId,
-        customerId: user?.id || 'customer1',
-        customerName: user?.name || 'John Customer',
-        mechanicId: job?.mechanicId || 'mechanic1',
-        mechanicName: job?.mechanicName || 'Mechanic',
+        user?.id || 'customer1',
+        user?.name || 'John Customer',
+        job?.mechanicId || 'mechanic1',
+        job?.mechanicName || 'Mechanic',
         rating,
         comment,
-        type: 'customer_to_mechanic'
-      });
+        'customer_to_mechanic'
+      );
 
       if (result.success) {
         // Notify the mechanic about the new rating
@@ -188,12 +190,25 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
           { 
             icon: 'check', 
             onPress: handleSubmit,
-            disabled: rating === 0 || !comment.trim() || loading
+            disabled: rating === 0 || !comment.trim() || loading || alreadyReviewed
           },
         ]}
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Already Reviewed Notice */}
+        {alreadyReviewed && (
+          <View style={[styles.section]}>
+            <View style={[styles.guidelinesCard, { backgroundColor: theme.cardBackground }]}> 
+              <View style={styles.guidelineItem}>
+                <IconFallback name="info" size={16} color={theme.warning} />
+                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}> 
+                  You have already submitted a review for this job. Submitting multiple reviews for the same job is not allowed.
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
         {/* Job Details */}
         {job && (
           <View style={styles.section}>
@@ -337,7 +352,11 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity
                       key={star}
-                      onPress={() => handleAspectRating(item.key, star)}
+                      onPress={() => {
+                        if (!alreadyReviewed && !loading) {
+                          handleAspectRating(item.key, star);
+                        }
+                      }}
                     >
                       <MaterialIcons
                         name={star <= aspectRatings[item.key] ? 'star' : 'star-border'}
@@ -369,6 +388,7 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
               multiline
               maxLength={500}
               textAlignVertical="top"
+              editable={!alreadyReviewed && !loading}
             />
             <Text style={[styles.commentHint, { color: theme.textSecondary }]}>
               {comment.length}/500 characters
@@ -418,11 +438,11 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
           style={[
             styles.submitButton,
             {
-              backgroundColor: rating > 0 && comment.trim() ? theme.primary : theme.textSecondary,
+              backgroundColor: rating > 0 && comment.trim() && !alreadyReviewed ? theme.primary : theme.textSecondary,
             }
           ]}
           onPress={handleSubmit}
-          disabled={rating === 0 || !comment.trim() || loading}
+          disabled={rating === 0 || !comment.trim() || loading || alreadyReviewed}
         >
           <IconFallback name="star" size={20} color={theme.onPrimary} />
           <Text style={[styles.submitButtonText, { color: theme.onPrimary }]}>

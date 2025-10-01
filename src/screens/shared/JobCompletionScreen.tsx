@@ -15,6 +15,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { usePayment } from '../../contexts/PaymentContext';
 import { useJob } from '../../contexts/SimplifiedJobContext';
+import { useReview } from '../../contexts/ReviewContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatJobCost } from '../../utils/JobCostUtils';
 import NotificationService from '../../services/NotificationService';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -34,6 +36,8 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
   const { t } = useLanguage();
   const { payments, releasePayment } = usePayment();
   const { updateJobStatus, getJob, refreshData } = useJob();
+  const { hasUserReviewed } = useReview() as any;
+  const { user } = useAuth();
   const theme = getCurrentTheme();
 
   const { jobId } = route.params || {};
@@ -41,46 +45,37 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
   const [payment, setPayment] = useState<any>(null);
   const [loading, setLoading] = useState<any>(false);
   const [showPaymentRelease, setShowPaymentRelease] = useState<any>(false);
+  const hasRated = !!hasUserReviewed?.(jobId, user?.id || 'customer1', 'customer_to_mechanic');
 
   useEffect(() => {
-    const fetchJobData = async () => {
-      if (jobId) {
-        // Refresh data first to ensure we have the latest job information
-        try {
-          await refreshData();
-        } catch (error) {
-          console.error('JobCompletionScreen - Error refreshing data:', error);
-        }
-        
-        // Fetch the actual job data from the job context
-        const actualJob = getJob ? getJob(jobId) : null;
-        
-        if (actualJob) {
-          setJob(actualJob);
-        } else {
-          // Fallback to mock data if job not found
-          const mockJob = {
-            id: jobId,
-            title: 'Service Request',
-            description: 'Automotive service completed',
-            customerId: 'customer1',
-            mechanicId: 'mechanic1',
-            status: 'completed',
-            estimatedCost: 0,
-            price: 0,
-            additionalWorkAmount: 0,
-            completedAt: new Date().toISOString(),
-          };
-          setJob(mockJob);
-        }
-        
-        // Find associated payment
-        const associatedPayment = payments.find(p => p.jobId === jobId);
-        setPayment(associatedPayment);
+    let isMounted = true;
+    (async () => {
+      if (!jobId) return;
+      try {
+        await refreshData();
+      } catch (_) {}
+      if (!isMounted) return;
+      const actualJob = getJob ? getJob(jobId) : null;
+      if (actualJob) {
+        setJob(actualJob);
+      } else {
+        setJob({
+          id: jobId,
+          title: 'Service Request',
+          description: 'Automotive service completed',
+          customerId: 'customer1',
+          mechanicId: 'mechanic1',
+          status: 'completed',
+          estimatedCost: 0,
+          price: 0,
+          additionalWorkAmount: 0,
+          completedAt: new Date().toISOString(),
+        });
       }
-    };
-
-    fetchJobData();
+      const associatedPayment = payments.find(p => p.jobId === jobId);
+      setPayment(associatedPayment);
+    })();
+    return () => { isMounted = false; };
   }, [jobId, payments, getJob, refreshData]);
 
   const handleReleasePayment = async () => {
@@ -192,6 +187,8 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
         subtitle="Service has been completed successfully"
         showBack={true}
         onBackPress={() => navigation.goBack()}
+        showNotifications={false}
+        showProfile={false}
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -205,8 +202,9 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
                 <Text style={[styles.completionTitle, { color: theme.text }]}>
                   Service Completed
                 </Text>
-                <Text style={[styles.completionSubtitle, { color: theme.textSecondary }]}>
-                  Your automotive service has been completed successfully
+                <Text style={[styles.completionSubtitle, { color: theme.textSecondary }]}> 
+                  Your automotive service has been 
+                  <Text style={{ color: theme.success, fontWeight: '700' }}> completed successfully</Text>
                 </Text>
               </View>
             </View>
@@ -300,10 +298,15 @@ export default function JobCompletionScreen({ navigation, route }: JobCompletion
             )}
             
             <MaterialButton
-              title="Rate Mechanic"
+              title={hasRated ? 'Rating has been submitted' : 'Rate Mechanic'}
               onPress={handleRateMechanic}
-              style={[styles.actionButton, styles.rateButton, { borderColor: theme.primary }]}
-              textStyle={{ color: theme.primary }}
+              disabled={hasRated}
+              style={[
+                styles.actionButton,
+                styles.rateButton,
+                hasRated ? { borderWidth: 0 } : { borderColor: theme.primary }
+              ]}
+              textStyle={{ color: hasRated ? theme.success : theme.primary }}
               leftIcon="star"
             />
             

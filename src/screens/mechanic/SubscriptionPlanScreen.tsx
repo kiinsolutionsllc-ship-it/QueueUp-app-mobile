@@ -119,7 +119,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
       }
     } catch (error) {
       console.error('Subscription error:', error);
-      Alert.alert('Subscription Failed', error.message || 'There was an error processing your subscription. Please try again.');
+      Alert.alert('Subscription Failed', (error instanceof Error ? error.message : 'Unknown error') || 'There was an error processing your subscription. Please try again.');
     } finally {
       setIsLoading(false);
     }

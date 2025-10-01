@@ -459,55 +459,28 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
   };
 
   const handleMessageCustomer = async (job: any) => {
-    try {
-      const mechanicId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
-      const participantIds = [mechanicId, job.customerId];
-      const participantNames = [user?.name || 'Mechanic', job.customerName || 'Customer'];
-      
-      // Find or create conversation using the messaging context
-      const result = await findOrCreateConversation(participantIds, job.id, participantNames);
-      
-      if (result.success && result.conversation) {
-        // Use the conversation from the messaging service
-        setSelectedConversation(result.conversation);
-        setShowConversationModal(true);
-      } else {
-        // Fallback: Create a local conversation object if the service fails
-        const fallbackConversation: Conversation = {
-          id: `conv-${job.id}-${job.customerId}`,
-          participants: participantIds,
-          jobId: job.id,
-          type: 'job_related',
-          title: job.customerName || 'Customer',
-          lastMessage: '',
-          lastMessageTime: new Date().toISOString(),
-          unreadCounts: {},
-          isPinned: false,
-          isArchived: false,
-          isMuted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            jobTitle: job.title,
-            customerName: job.customerName,
-            vehicleInfo: job.vehicle ? formatVehicle(resolveVehicleData(job.vehicle)) : 'Unknown Vehicle',
-            priority: job.urgency || 'medium',
-          },
-        };
-        
-        setSelectedConversation(fallbackConversation);
-        setShowConversationModal(true);
-      }
-    } catch (error) {
-      console.error('Error creating/finding conversation:', error);
-      // Show error and fallback to local conversation
-      Alert.alert('Error', 'Failed to start conversation. Please try again.');
-    }
+    const mechanicId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+    navigation.navigate('Messaging', {
+      startConversation: {
+        participants: [mechanicId, job.customerId],
+        jobId: job.id,
+        title: job.customerName || 'Customer',
+        jobTitle: job.title || 'Service Request',
+      },
+    });
   };
 
 
   const handleMessageSent = () => {
     // Handle message sent callback
+  };
+
+  const handleNotifications = () => {
+    navigation.navigate('Notifications');
+  };
+
+  const handleProfile = () => {
+    navigation.navigate('UnifiedProfile');
   };
 
   const handleChangeOrder = (job: any) => {
@@ -1001,19 +974,8 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
         title={activeTab === 'available' ? 'Available Jobs' : 'My Jobs'}
         showBack={true}
         onBackPress={() => navigation.goBack()}
-        rightActions={[
-          {
-            icon: showSearchInput ? 'close' : 'search',
-            onPress: () => {
-              if (showSearchInput) {
-                setShowSearchInput(false);
-                setSearchQuery('');
-              } else {
-                setShowSearchInput(true);
-              }
-            },
-          },
-        ]}
+        onNotificationPress={handleNotifications}
+        onProfilePress={handleProfile}
       />
 
       {/* Search Input */}

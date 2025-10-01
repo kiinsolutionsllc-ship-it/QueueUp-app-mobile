@@ -165,7 +165,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
       }
       */
     } catch (err) {
-      setError(err.message);
+      setError(err instanceof Error ? err.message : 'Unknown error');
       // Fall back to mock data - no need to set error state as we have fallbacks
     } finally {
       setIsLoading(false);

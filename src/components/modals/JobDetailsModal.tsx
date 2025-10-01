@@ -14,10 +14,12 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useJob } from '../../contexts/SimplifiedJobContext';
+import { useVehicle } from '../../contexts/VehicleContext';
 import { formatVehicle } from '../../utils/UnifiedJobFormattingUtils';
 import { formatJobCost, getJobCostBreakdown } from '../../utils/JobCostUtils';
 import MaterialButton from '../shared/MaterialButton';
@@ -60,6 +62,7 @@ export default function JobDetailsModal({
   const theme = getCurrentTheme();
   const { user } = useAuth();
   const { updateJob, getJob } = useJob();
+  const { vehicles } = useVehicle();
 
   // State management
   const [activeTab, setActiveTab] = useState<'details' | 'notes' | 'photos'>('details');
@@ -71,6 +74,25 @@ export default function JobDetailsModal({
   const [currentJob, setCurrentJob] = useState(job);
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+
+  // Resolve vehicle data (handles both object and ID forms)
+  const resolveVehicleData = (vehicle: any) => {
+    if (!vehicle) return null;
+    if (typeof vehicle === 'object' && (vehicle.make || vehicle.model || vehicle.year)) {
+      return vehicle;
+    }
+    if (typeof vehicle === 'string') {
+      const found = vehicles?.find?.((v: any) => v.id === vehicle);
+      if (found) return found;
+    }
+    return vehicle;
+  };
+
+  // Permission: mechanics can access notes/photos only when assigned and in progress
+  const assignedMechanicId = (currentJob as any)?.selectedMechanicId || (currentJob as any)?.mechanicId;
+  const jobStatus = (currentJob as any)?.status?.toLowerCase?.() || '';
+  const isAssignedToMe = assignedMechanicId && (assignedMechanicId === (user?.id || ''));
+  const canMechanicAccessTabs = userType === 'mechanic' && isAssignedToMe && jobStatus === 'in_progress';
 
   // Animation refs
   const slideAnim = React.useRef(new Animated.Value(500)).current;
@@ -92,6 +114,10 @@ export default function JobDetailsModal({
       setShowPhotoViewer(false);
       setSelectedPhotoIndex(0);
       setCurrentJob(job);
+      // If mechanic and not allowed, ensure tab is set to details
+      if (userType === 'mechanic' && !canMechanicAccessTabs) {
+        setActiveTab('details');
+      }
       
       // Animate in
       Animated.parallel([
@@ -122,6 +148,13 @@ export default function JobDetailsModal({
       ]).start();
     }
   }, [visible, slideAnim, fadeAnim, job]);
+
+  // Re-validate tab when job or permissions change
+  useEffect(() => {
+    if (userType === 'mechanic' && !canMechanicAccessTabs && activeTab !== 'details') {
+      setActiveTab('details');
+    }
+  }, [userType, canMechanicAccessTabs, activeTab]);
 
   useEffect(() => {
     const backAction = () => {
@@ -166,6 +199,28 @@ export default function JobDetailsModal({
       default: return theme.textSecondary;
     }
   };
+
+  // Derived timeline to ensure completion appears if missing
+  const derivedTimeline = React.useMemo(() => {
+    const base = Array.isArray(currentJob?.progressionTimeline)
+      ? [...currentJob.progressionTimeline]
+      : [] as any[];
+
+    if (currentJob?.completedAt) {
+      const hasCompleted = base.some((e: any) => (e?.status || '').toLowerCase() === 'completed');
+      if (!hasCompleted) {
+        base.push({
+          status: 'completed',
+          description: 'Job completed',
+          timestamp: currentJob.completedAt,
+          actor: currentJob?.mechanicName || 'System',
+        });
+      }
+    }
+
+    base.sort((a: any, b: any) => new Date(a?.timestamp || a?.createdAt || 0).getTime() - new Date(b?.timestamp || b?.createdAt || 0).getTime());
+    return base;
+  }, [currentJob]);
 
   // Note handling
   const handleAddNote = async () => {
@@ -453,9 +508,58 @@ export default function JobDetailsModal({
           <IconFallback name="directions-car" size={16} color={theme.textSecondary} />
           <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Vehicle:</Text>
           <Text style={[styles.infoValue, { color: theme.text }]}>
-            {currentJob?.vehicle ? formatVehicle(currentJob.vehicle) : 'Not specified'}
+            {(() => {
+              const resolved = resolveVehicleData(currentJob?.vehicle);
+              if (resolved) {
+                const formatted = formatVehicle(resolved);
+                if (formatted) return formatted;
+                // Fallback if object lacks formatter-required fields
+                const y = (resolved as any)?.year; const mk = (resolved as any)?.make; const md = (resolved as any)?.model;
+                if (y || mk || md) return [y, mk, md].filter(Boolean).join(' ');
+              }
+              // Last resort: check job-level fields
+              const jy = (currentJob as any)?.year; const jmk = (currentJob as any)?.make; const jmd = (currentJob as any)?.model;
+              if (jy || jmk || jmd) return [jy, jmk, jmd].filter(Boolean).join(' ');
+              return 'Not specified';
+            })()}
           </Text>
         </View>
+
+        {/* Trim Level */}
+        {(() => {
+          const resolved = resolveVehicleData(currentJob?.vehicle);
+          const trim = resolved?.trim || (currentJob as any)?.trim;
+          if (trim) {
+            return (
+              <View style={styles.infoRow}>
+                <IconFallback name="build" size={16} color={theme.textSecondary} />
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Trim Level:</Text>
+                <Text style={[styles.infoValue, { color: theme.text }]}>
+                  {trim}
+                </Text>
+              </View>
+            );
+          }
+          return null;
+        })()}
+
+        {/* Current Mileage */}
+        {(() => {
+          const resolved = resolveVehicleData(currentJob?.vehicle);
+          const mileage = resolved?.mileage || (currentJob as any)?.mileage;
+          if (mileage) {
+            return (
+              <View style={styles.infoRow}>
+                <IconFallback name="speed" size={16} color={theme.textSecondary} />
+                <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Current Mileage:</Text>
+                <Text style={[styles.infoValue, { color: theme.text }]}>
+                  {mileage.toLocaleString()} miles
+                </Text>
+              </View>
+            );
+          }
+          return null;
+        })()}
 
         {currentJob?.description && (
           <View style={styles.descriptionContainer}>
@@ -468,10 +572,10 @@ export default function JobDetailsModal({
       </MaterialCard>
 
       {/* Job Timeline */}
-      {currentJob?.progressionTimeline && currentJob.progressionTimeline.length > 0 && (
+      {derivedTimeline && derivedTimeline.length > 0 && (
         <MaterialCard style={styles.timelineCard}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Job Timeline</Text>
-          {currentJob.progressionTimeline.map((entry: any, index: number) => (
+          {derivedTimeline.map((entry: any, index: number) => (
             <View key={index} style={styles.timelineItem}>
               <View style={[styles.timelineDot, { backgroundColor: theme.primary }]} />
               <View style={styles.timelineContent}>
@@ -582,41 +686,77 @@ export default function JobDetailsModal({
         </View>
       </MaterialCard>
 
-      {/* Photos Grid */}
+      {/* Photos - Separate rows for Mechanic and Customer uploads */}
       <MaterialCard style={styles.photosCard}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Job Photos</Text>
         {currentJob?.photos && currentJob.photos.length > 0 ? (
-          <View style={styles.photosGrid}>
-            {currentJob.photos.map((photo: JobPhoto, index: number) => (
-              <View key={photo.id || index} style={styles.photoItem}>
-                <View style={styles.photoContainer}>
-                  <TouchableOpacity
-                    onPress={() => handlePhotoPress(index)}
-                    activeOpacity={0.8}
-                  >
-                    <Image source={{ uri: photo.uri }} style={styles.photoImage} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.deletePhotoButton, { backgroundColor: theme.error + '20' }]}
-                    onPress={() => deletePhoto(photo.id)}
-                  >
-                    <IconFallback name="close" size={16} color={theme.error} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.photoInfo}>
-                  <Text style={[styles.photoCaption, { color: theme.text }]} numberOfLines={2}>
-                    {photo.caption || 'No caption'}
-                  </Text>
-                  <Text style={[styles.photoAuthor, { color: theme.textSecondary }]}>
-                    {photo.author} ({photo.authorType})
-                  </Text>
-                  <Text style={[styles.photoTimestamp, { color: theme.textSecondary }]}>
-                    {formatTimestamp(photo.timestamp)}
-                  </Text>
-                </View>
+          <>
+            {/* Mechanic Photos Row */}
+            {currentJob.photos.filter((p: any) => p.authorType === 'mechanic').length > 0 && (
+              <View style={styles.photoRowSection}>
+                <Text style={[styles.photoRowTitle, { color: theme.textSecondary }]}>Mechanic Uploads</Text>
+                <FlatList
+                  data={currentJob.photos.filter((p: any) => p.authorType === 'mechanic')}
+                  keyExtractor={(item: any, idx: number) => item.id || `mech-${idx}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  scrollEnabled={true}
+                  contentContainerStyle={styles.photoRowContent}
+                  renderItem={({ item, index }) => (
+                    <View style={styles.photoRowItem}>
+                      <View style={styles.photoContainer}>
+                        <TouchableOpacity
+                          onPress={() => handlePhotoPress(index)}
+                          activeOpacity={0.8}
+                        >
+                          <Image source={{ uri: item.uri }} style={styles.photoRowImage} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.deletePhotoButton, { backgroundColor: theme.error + '20' }]}
+                          onPress={() => deletePhoto(item.id)}
+                        >
+                          <IconFallback name="close" size={16} color={theme.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                />
               </View>
-            ))}
-          </View>
+            )}
+
+            {/* Customer Photos Row */}
+            {currentJob.photos.filter((p: any) => p.authorType === 'customer').length > 0 && (
+              <View style={styles.photoRowSection}>
+                <Text style={[styles.photoRowTitle, { color: theme.textSecondary }]}>Customer Uploads</Text>
+                <FlatList
+                  data={currentJob.photos.filter((p: any) => p.authorType === 'customer')}
+                  keyExtractor={(item: any, idx: number) => item.id || `cust-${idx}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  scrollEnabled={true}
+                  contentContainerStyle={styles.photoRowContent}
+                  renderItem={({ item, index }) => (
+                    <View style={styles.photoRowItem}>
+                      <View style={styles.photoContainer}>
+                        <TouchableOpacity
+                          onPress={() => handlePhotoPress(index)}
+                          activeOpacity={0.8}
+                        >
+                          <Image source={{ uri: item.uri }} style={styles.photoRowImage} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.deletePhotoButton, { backgroundColor: theme.error + '20' }]}
+                          onPress={() => deletePhoto(item.id)}
+                        >
+                          <IconFallback name="close" size={16} color={theme.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                />
+              </View>
+            )}
+          </>
         ) : (
           <View style={styles.emptyPhotosState}>
             <IconFallback name="photo-camera" size={48} color={theme.textSecondary} />
@@ -677,22 +817,26 @@ export default function JobDetailsModal({
                 Details
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, { borderBottomColor: activeTab === 'notes' ? theme.primary : 'transparent' }]}
-              onPress={() => setActiveTab('notes')}
-            >
-              <Text style={[styles.tabText, { color: activeTab === 'notes' ? theme.primary : theme.textSecondary }]}>
-                Notes
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, { borderBottomColor: activeTab === 'photos' ? theme.primary : 'transparent' }]}
-              onPress={() => setActiveTab('photos')}
-            >
-              <Text style={[styles.tabText, { color: activeTab === 'photos' ? theme.primary : theme.textSecondary }]}>
-                Photos
-              </Text>
-            </TouchableOpacity>
+            {(userType !== 'mechanic' || canMechanicAccessTabs) && (
+              <TouchableOpacity
+                style={[styles.tabButton, { borderBottomColor: activeTab === 'notes' ? theme.primary : 'transparent' }]}
+                onPress={() => setActiveTab('notes')}
+              >
+                <Text style={[styles.tabText, { color: activeTab === 'notes' ? theme.primary : theme.textSecondary }]}>
+                  Notes
+                </Text>
+              </TouchableOpacity>
+            )}
+            {(userType !== 'mechanic' || canMechanicAccessTabs) && (
+              <TouchableOpacity
+                style={[styles.tabButton, { borderBottomColor: activeTab === 'photos' ? theme.primary : 'transparent' }]}
+                onPress={() => setActiveTab('photos')}
+              >
+                <Text style={[styles.tabText, { color: activeTab === 'photos' ? theme.primary : theme.textSecondary }]}>
+                  Photos
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Tab Content */}
@@ -701,8 +845,8 @@ export default function JobDetailsModal({
             style={styles.content}
           >
             {activeTab === 'details' && renderJobDetails()}
-            {activeTab === 'notes' && renderNotes()}
-            {activeTab === 'photos' && renderPhotos()}
+            {(userType !== 'mechanic' || canMechanicAccessTabs) && activeTab === 'notes' && renderNotes()}
+            {(userType !== 'mechanic' || canMechanicAccessTabs) && activeTab === 'photos' && renderPhotos()}
           </KeyboardAvoidingView>
         </Animated.View>
       </Animated.View>
@@ -944,21 +1088,41 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 16,
   },
+  photoRowSection: {
+    marginBottom: 12,
+  },
+  photoRowTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  photoRowContent: {
+    gap: 8,
+  },
+  photoRowItem: {
+    marginRight: 8,
+  },
+  photoRowImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
   photoItem: {
-    width: '48%',
-    marginBottom: 16,
+    width: '31%',
+    marginBottom: 12,
   },
   photoContainer: {
     position: 'relative',
   },
   photoImage: {
     width: '100%',
-    height: 120,
+    height: 90,
     borderRadius: 8,
     backgroundColor: '#f0f0f0',
   },

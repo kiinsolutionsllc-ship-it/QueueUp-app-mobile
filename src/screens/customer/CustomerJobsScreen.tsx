@@ -106,8 +106,8 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
   // Filter jobs
   const filteredJobs = useMemo(() => {
     if (filter === 'all') {
-      // Show all jobs except cancelled ones
-      return jobs.filter((job: any) => job.status !== 'cancelled');
+      // Show all jobs except cancelled and completed ones
+      return jobs.filter((job: any) => job.status !== 'cancelled' && job.status !== 'completed');
     }
     
     return jobs.filter((job: any) => {
@@ -174,51 +174,15 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
       return;
     }
 
-    try {
-      const customerId = user?.id || '';
-      const participantIds = [customerId, job.selectedMechanicId];
-      const participantNames = [user?.name || 'Customer', job.mechanicName || 'Mechanic'];
-      
-      // Find or create conversation using the messaging context
-      const result = await findOrCreateConversation(participantIds, job.id, participantNames);
-      
-      if (result.success && result.conversation) {
-        // Use the conversation from the messaging service
-        setSelectedConversation(result.conversation);
-        setShowConversationModal(true);
-      } else {
-        // Fallback: Create a local conversation object if the service fails
-        const fallbackConversation: Conversation = {
-          id: `conv-${job.id}-${job.selectedMechanicId}`,
-          participants: participantIds,
-          jobId: job.id,
-          type: 'job_related',
-          title: job.mechanicName || 'Mechanic',
-          lastMessage: '',
-          lastMessageTime: new Date().toISOString(),
-          unreadCounts: {},
-          isPinned: false,
-          isArchived: false,
-          isMuted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            jobTitle: job.title,
-            mechanicName: job.mechanicName || 'Mechanic',
-            customerName: user?.name || 'Customer',
-            vehicleInfo: job.vehicle ? formatVehicle(resolveVehicleData(job.vehicle)) : 'Unknown Vehicle',
-            priority: job.urgency || 'medium',
-          },
-        };
-        
-        setSelectedConversation(fallbackConversation);
-        setShowConversationModal(true);
-      }
-    } catch (error) {
-      console.error('Error creating/finding conversation:', error);
-      // Show error and fallback to local conversation
-      Alert.alert('Error', 'Failed to start conversation. Please try again.');
-    }
+    const customerId = user?.id || '';
+    navigation.navigate('Messaging', {
+      startConversation: {
+        participants: [customerId, job.selectedMechanicId],
+        jobId: job.id,
+        title: job.mechanicName || 'Mechanic',
+        jobTitle: job.title || 'Service Request',
+      },
+    });
   };
 
   const handleViewChangeOrder = (job: any) => {
@@ -525,52 +489,74 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
                     </>
                   ) : (
                     <>
-                      {/* Show Edit Job button for jobs past bidding stage, View Bids for others */}
-                      {(job.status === 'accepted' || job.status === 'scheduled' || job.status === 'in_progress' || job.status === 'started') ? (
-                        <MaterialButton
-                          title="Edit"
-                          onPress={() => handleEditJob(job)}
-                          variant="outlined"
-                          size="small"
-                          style={styles.accordionButton}
-                          icon="edit"
-                        />
+                      {job.status === 'completed' ? (
+                        <>
+                          <MaterialButton
+                            title="Notes"
+                            onPress={() => handleJobDetails(job)}
+                            variant="outlined"
+                            size="small"
+                            style={styles.accordionButton}
+                          />
+                          <MaterialButton
+                            title="Completion Details"
+                            onPress={() => navigation.navigate('JobCompletion', { jobId: job.id })}
+                            variant="outlined"
+                            size="small"
+                            style={styles.accordionButton}
+                            icon="check-circle"
+                          />
+                        </>
                       ) : (
-                        <MaterialButton
-                          title="Bids"
-                          onPress={() => handleViewBids(job)}
-                          variant="outlined"
-                          size="small"
-                          style={styles.accordionButton}
-                        />
-                      )}
-                      <MaterialButton
-                        title="Details"
-                        onPress={() => handleJobDetails(job)}
-                        variant="outlined"
-                        size="small"
-                        style={styles.accordionButton}
-                      />
-                      {/* Message button - show when job has a selected mechanic */}
-                      {(job.status === 'accepted' || job.status === 'scheduled' || job.status === 'in_progress' || job.status === 'started') && job.selectedMechanicId && (
-                        <MaterialButton
-                          title="Message"
-                          onPress={() => handleMessageMechanic(job)}
-                          variant="outlined"
-                          size="small"
-                          style={styles.accordionButton}
-                          icon="message"
-                        />
-                      )}
-                      {/* Schedule button - show when bid is accepted */}
-                      {(job.status === 'accepted' || job.status === 'scheduled') && (
-                        <MaterialButton
-                          title="Schedule"
-                          onPress={() => handleScheduleJob(job)}
-                          variant="outlined"
-                          size="small"
-                          style={styles.accordionButton}
-                        />
+                        <>
+                          {/* Show Edit Job button for jobs past bidding stage, View Bids for others */}
+                          {(job.status === 'accepted' || job.status === 'scheduled' || job.status === 'in_progress' || job.status === 'started') ? (
+                            <MaterialButton
+                              title="Edit"
+                              onPress={() => handleEditJob(job)}
+                              variant="outlined"
+                              size="small"
+                              style={styles.accordionButton}
+                              icon="edit"
+                            />
+                          ) : (
+                            <MaterialButton
+                              title="Bids"
+                              onPress={() => handleViewBids(job)}
+                              variant="outlined"
+                              size="small"
+                              style={styles.accordionButton}
+                            />
+                          )}
+                          <MaterialButton
+                            title="Details"
+                            onPress={() => handleJobDetails(job)}
+                            variant="outlined"
+                            size="small"
+                            style={styles.accordionButton}
+                          />
+                          {/* Message button - show when job has a selected mechanic */}
+                          {(job.status === 'accepted' || job.status === 'scheduled' || job.status === 'in_progress' || job.status === 'started') && job.selectedMechanicId && (
+                            <MaterialButton
+                              title="Message"
+                              onPress={() => handleMessageMechanic(job)}
+                              variant="outlined"
+                              size="small"
+                              style={styles.accordionButton}
+                              icon="message"
+                            />
+                          )}
+                          {/* Schedule button - show when bid is accepted */}
+                          {(job.status === 'accepted' || job.status === 'scheduled') && (
+                            <MaterialButton
+                              title="Schedule"
+                              onPress={() => handleScheduleJob(job)}
+                              variant="outlined"
+                              size="small"
+                              style={styles.accordionButton}
+                            />
+                          )}
+                        </>
                       )}
                     </>
                   )}

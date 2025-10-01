@@ -333,6 +333,13 @@ class NotificationService {
         priority: 'high',
         actionRequired: false,
         category: 'payment'
+      },
+      'new_message': {
+        title: 'New Message',
+        message: data.messageContent || 'You have received a new message.',
+        priority: 'medium',
+        actionRequired: false,
+        category: 'message'
       }
     };
 

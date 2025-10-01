@@ -219,6 +219,7 @@ export class PaymentServiceNew {
           currency: 'USD',
           type: 'escrow_deposit',
           status: 'pending',
+          payment_method: 'card',
           description: 'Escrow deposit - held until job completion',
           created_at: new Date().toISOString(),
         };
@@ -270,6 +271,7 @@ export class PaymentServiceNew {
           currency: 'USD',
           type: 'final_payment',
           status: 'pending',
+          payment_method: 'card',
           description: 'Final payment for completed job',
           created_at: new Date().toISOString(),
         };
@@ -915,7 +917,7 @@ export class PaymentServiceNew {
       };
 
       if (!paymentResult.success) {
-        return { success: false, error: paymentResult.error };
+        return { success: false, error: 'Payment processing failed' };
       }
 
       // Calculate commission for change order (typically lower rate for additional work)
@@ -972,6 +974,7 @@ export class PaymentServiceNew {
           currency: 'USD',
           type: 'change_order_payment',
           status: 'completed',
+          payment_method: 'card',
           description: 'Payment for additional work via change order',
           payment_method_id: paymentMethodId,
           stripe_payment_intent_id: `pi_change_${Date.now()}`,
@@ -1012,6 +1015,7 @@ export class PaymentServiceNew {
         currency: 'USD',
         type: 'change_order_payment',
         status: 'completed',
+        payment_method: 'card',
         description: 'Payment for additional work via change order',
         payment_method_id: paymentMethodId,
         stripe_payment_intent_id: stripeResult.paymentIntentId,

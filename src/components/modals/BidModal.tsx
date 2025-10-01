@@ -50,6 +50,7 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<BidFormData>>({});
+  const [calculatedTotal, setCalculatedTotal] = useState<string>('0.00');
 
   // Animation refs
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -58,11 +59,14 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
   // Reset form when modal opens/closes
   useEffect(() => {
     if (visible) {
+      // Default to 'fixed' for mobile mechanics, 'fixed' for shop mechanics
+      const defaultBidType = user?.mechanic_type === 'shop' ? 'fixed' : 'fixed';
+      
       setFormData({
         price: '',
         message: '',
         estimatedDuration: '',
-        bidType: 'fixed',
+        bidType: defaultBidType,
       });
       setErrors({});
       
@@ -96,6 +100,11 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
     }
   }, [visible, scaleAnim, fadeAnim]);
 
+  // Update calculated total when form data changes
+  useEffect(() => {
+    setCalculatedTotal(calculateTotalCost());
+  }, [formData.price, formData.estimatedDuration, formData.bidType, user?.mechanic_type]);
+
   // Handle back button for Android
   useEffect(() => {
     const backAction = () => {
@@ -123,8 +132,8 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
       newErrors.message = 'Please enter a detailed message (at least 10 characters)';
     }
 
-    // Validate duration for hourly bids
-    if (formData.bidType === 'hourly') {
+    // Validate duration for hourly bids (only for shop mechanics)
+    if (user?.mechanic_type === 'shop' && formData.bidType === 'hourly') {
       if (!formData.estimatedDuration || isNaN(parseInt(formData.estimatedDuration)) || parseInt(formData.estimatedDuration) <= 0) {
         newErrors.estimatedDuration = 'Please enter a valid estimated duration';
       }
@@ -162,8 +171,8 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
       mechanicName: user?.name || 'Test Mechanic',
       price: parseFloat(formData.price),
       message: formData.message.trim(),
-      estimatedDuration: formData.bidType === 'hourly' ? parseInt(formData.estimatedDuration) : undefined,
-      bidType: formData.bidType,
+      estimatedDuration: user?.mechanic_type === 'shop' && formData.bidType === 'hourly' ? parseInt(formData.estimatedDuration) : undefined,
+      bidType: user?.mechanic_type === 'shop' ? formData.bidType : 'fixed', // Force fixed for mobile mechanics
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
@@ -172,9 +181,10 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
       const result = await createBid(bidData);
       
       if (result.success) {
+        const actualBidType = user?.mechanic_type === 'shop' ? formData.bidType : 'fixed';
         Alert.alert(
           'Bid Submitted Successfully! 🎉',
-          `Your bid of $${formData.price}${formData.bidType === 'hourly' ? '/hour' : ''} has been submitted for "${selectedJob.title || 'this job'}".`,
+          `Your bid of $${formData.price}${actualBidType === 'hourly' ? '/hour' : ''} has been submitted for "${selectedJob.title || 'this job'}".`,
           [{ text: 'OK', onPress: () => {
             onClose();
             if (onBidSubmitted) {
@@ -202,12 +212,19 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
   };
 
   const calculateTotalCost = (): string => {
-    if (formData.bidType === 'hourly' && formData.price && formData.estimatedDuration) {
+    if (user?.mechanic_type === 'shop' && formData.bidType === 'hourly' && formData.price && formData.estimatedDuration) {
       const hourlyRate = parseFloat(formData.price);
-      const durationHours = parseInt(formData.estimatedDuration) / 60;
-      return (hourlyRate * durationHours).toFixed(2);
+      const durationMinutes = parseInt(formData.estimatedDuration);
+      
+      if (isNaN(hourlyRate) || isNaN(durationMinutes) || hourlyRate <= 0 || durationMinutes <= 0) {
+        return '0.00';
+      }
+      
+      const durationHours = durationMinutes / 60;
+      const total = hourlyRate * durationHours;
+      return total.toFixed(2);
     }
-    return formData.price;
+    return formData.price || '0.00';
   };
 
   const formatJobTitle = (title: string | undefined): string => {
@@ -289,73 +306,83 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
                 </View>
               </MaterialCard>
 
-              {/* Bid Type Selection */}
-              <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>Bid Type</Text>
-                <View style={styles.bidTypeContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.bidTypeButton,
-                      { 
-                        backgroundColor: formData.bidType === 'fixed' ? theme.primary : theme.surface,
-                        borderColor: theme.primary
-                      }
-                    ]}
-                    onPress={() => updateFormData('bidType', 'fixed')}
-                  >
-                    <IconFallback 
-                      name="work" 
-                      size={20} 
-                      color={formData.bidType === 'fixed' ? 'white' : theme.primary} 
-                    />
-                    <Text style={[
-                      styles.bidTypeText, 
-                      { color: formData.bidType === 'fixed' ? 'white' : theme.primary }
-                    ]}>
-                      Fixed Price
-                    </Text>
-                  </TouchableOpacity>
+              {/* Bid Type Selection - Only show for shop mechanics */}
+              {user?.mechanic_type === 'shop' && (
+                <View style={styles.section}>
+                  <Text style={[styles.sectionTitle, { color: theme.text }]}>Bid Type</Text>
+                  <View style={styles.bidTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.bidTypeButton,
+                        { 
+                          backgroundColor: formData.bidType === 'fixed' ? theme.primary : theme.surface,
+                          borderColor: theme.primary
+                        }
+                      ]}
+                      onPress={() => updateFormData('bidType', 'fixed')}
+                    >
+                      <IconFallback 
+                        name="work" 
+                        size={20} 
+                        color={formData.bidType === 'fixed' ? 'white' : theme.primary} 
+                      />
+                      <Text style={[
+                        styles.bidTypeText, 
+                        { color: formData.bidType === 'fixed' ? 'white' : theme.primary }
+                      ]}>
+                        Fixed Price
+                      </Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.bidTypeButton,
-                      { 
-                        backgroundColor: formData.bidType === 'hourly' ? theme.primary : theme.surface,
-                        borderColor: theme.primary
-                      }
-                    ]}
-                    onPress={() => updateFormData('bidType', 'hourly')}
-                  >
-                    <IconFallback 
-                      name="access-time" 
-                      size={20} 
-                      color={formData.bidType === 'hourly' ? 'white' : theme.primary} 
-                    />
-                    <Text style={[
-                      styles.bidTypeText, 
-                      { color: formData.bidType === 'hourly' ? 'white' : theme.primary }
-                    ]}>
-                      Hourly Rate
-                    </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.bidTypeButton,
+                        { 
+                          backgroundColor: formData.bidType === 'hourly' ? theme.primary : theme.surface,
+                          borderColor: theme.primary
+                        }
+                      ]}
+                      onPress={() => updateFormData('bidType', 'hourly')}
+                    >
+                      <IconFallback 
+                        name="access-time" 
+                        size={20} 
+                        color={formData.bidType === 'hourly' ? 'white' : theme.primary} 
+                      />
+                      <Text style={[
+                        styles.bidTypeText, 
+                        { color: formData.bidType === 'hourly' ? 'white' : theme.primary }
+                      ]}>
+                        Hourly Rate
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
+              )}
 
               {/* Price Input */}
               <View style={styles.section}>
                 <MaterialTextInput
-                  label={formData.bidType === 'hourly' ? 'Hourly Rate ($)' : 'Total Price ($)'}
+                  label={
+                    user?.mechanic_type === 'shop' && formData.bidType === 'hourly' 
+                      ? 'Hourly Rate ($)' 
+                      : 'Total Price ($)'
+                  }
                   value={formData.price}
                   onChangeText={(value) => updateFormData('price', value)}
                   keyboardType="numeric"
                   rightIcon="attach-money"
-                  placeholder={formData.bidType === 'hourly' ? '75' : '150'}
+                  placeholder={
+                    user?.mechanic_type === 'shop' && formData.bidType === 'hourly' 
+                      ? '75' 
+                      : '150'
+                  }
                   error={errors.price}
                 />
               </View>
 
-              {/* Duration Input (for hourly) */}
-              {formData.bidType === 'hourly' && (
+              {/* Duration Input (for hourly) - Only for shop mechanics */}
+              {user?.mechanic_type === 'shop' && formData.bidType === 'hourly' && (
                 <View style={styles.section}>
                   <MaterialTextInput
                     label="Estimated Duration (minutes)"
@@ -369,15 +396,26 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
                 </View>
               )}
 
-              {/* Cost Preview */}
-              {formData.bidType === 'hourly' && formData.price && formData.estimatedDuration && (
+              {/* Cost Preview - Only for shop mechanics with hourly bids */}
+              {user?.mechanic_type === 'shop' && formData.bidType === 'hourly' && formData.price && formData.estimatedDuration && (
                 <View style={styles.section}>
-                  <MaterialCard style={[styles.costPreview, { backgroundColor: theme.success + '15' }]}>
+                  <MaterialCard style={[styles.costPreview, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '30' }]}>
                     <View style={styles.costPreviewContent}>
-                      <IconFallback name="calculate" size={20} color={theme.success} />
-                      <Text style={[styles.costPreviewText, { color: theme.success }]}>
-                        Estimated total: ${calculateTotalCost()}
-                      </Text>
+                      <IconFallback name="calculate" size={20} color={theme.primary} />
+                      <View style={styles.costPreviewDetails}>
+                        <Text style={[styles.costPreviewTitle, { color: theme.primary }]}>
+                          Cost Breakdown
+                        </Text>
+                        <Text style={[styles.costPreviewText, { color: theme.text }]}>
+                          ${formData.price}/hour × {formData.estimatedDuration} minutes
+                        </Text>
+                        <Text style={[styles.costPreviewText, { color: theme.textSecondary, fontSize: 12 }]}>
+                          ({formData.estimatedDuration ? (parseInt(formData.estimatedDuration) / 60).toFixed(1) : '0.0'} hours)
+                        </Text>
+                        <Text style={[styles.costPreviewTotal, { color: theme.primary }]}>
+                          Total: ${calculatedTotal}
+                        </Text>
+                      </View>
                     </View>
                   </MaterialCard>
                 </View>
@@ -543,16 +581,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   costPreview: {
-    padding: 14,
+    padding: 16,
+    borderWidth: 1,
   },
   costPreviewContent: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  costPreviewDetails: {
+    flex: 1,
+  },
+  costPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   costPreviewText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  costPreviewTotal: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   actions: {
     flexDirection: 'row',

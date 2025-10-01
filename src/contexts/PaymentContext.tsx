@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import PaymentService from '../services/PaymentService';
+import paymentServiceNew from '../services/PaymentServiceNew';
 import CommissionService from '../services/CommissionService';
 
 // Type definitions
@@ -259,7 +259,7 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) =>
       if (!payment) return { success: false, error: 'Payment not found' };
 
       // Process refund with real payment processor
-      const refundResult = await PaymentService.refundPayment(paymentId, reason as any);
+      const refundResult = await paymentServiceNew.refundPayment(paymentId, reason as any);
       
       if (!refundResult.success) {
         return { success: false, error: refundResult.error };
@@ -272,7 +272,7 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) =>
               ...p, 
               status: 'refunded' as const, 
               refundedAt: new Date().toISOString(),
-              refundId: refundResult.refund.id,
+              refundId: refundResult.data?.id || `refund_${Date.now()}`,
             }
           : p
       );
@@ -288,7 +288,7 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({ children }) =>
       setEscrowAccounts(updatedEscrowAccounts);
       await AsyncStorage.setItem('escrowAccounts', JSON.stringify(updatedEscrowAccounts));
       
-      return { success: true, refund: refundResult.refund };
+      return { success: true, refund: refundResult.data };
     } catch (error: any) {
       console.error('Error refunding payment:', error);
       return { success: false, error: error.message };

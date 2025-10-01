@@ -12,6 +12,7 @@ export interface User {
   avatar?: string;
   user_type: 'customer' | 'mechanic';
   role: 'customer' | 'mechanic'; // Alias for user_type for compatibility
+  mechanic_type?: 'mobile' | 'shop'; // For mechanics: mobile or shop
   created_at: string;
   updated_at: string;
   profile_completed?: boolean;

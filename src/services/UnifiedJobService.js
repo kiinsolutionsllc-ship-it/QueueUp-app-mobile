@@ -14,6 +14,11 @@ class UnifiedJobService {
     this.initialized = false;
   }
 
+  get debugEnabled() {
+    // Toggle verbose logs here or via env if desired
+    return false;
+  }
+
   // Initialize the service
   async initialize() {
     if (this.initialized) return;
@@ -32,7 +37,7 @@ class UnifiedJobService {
 
   // Load all data from AsyncStorage - ENABLED FOR TESTING
   async loadData() {
-    console.log('UnifiedJobService: Loading stored data for testing');
+    if (this.debugEnabled) console.log('UnifiedJobService: Loading stored data for testing');
     
     try {
       // Try to load existing data first
@@ -49,7 +54,7 @@ class UnifiedJobService {
       this.messages = messagesData ? JSON.parse(messagesData) : [];
       this.jobHistory = jobHistoryData ? JSON.parse(jobHistoryData) : [];
 
-      console.log('UnifiedJobService: Loaded data - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
+      if (this.debugEnabled) console.log('UnifiedJobService: Loaded data - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
     } catch (error) {
       console.error('UnifiedJobService: Error loading stored data:', error);
       // Initialize with empty arrays if loading fails
@@ -69,7 +74,7 @@ class UnifiedJobService {
         AsyncStorage.setItem('unified_messages', JSON.stringify(this.messages)),
         AsyncStorage.setItem('unified_job_history', JSON.stringify(this.jobHistory))
       ]);
-      console.log('UnifiedJobService: Data saved - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
+      if (this.debugEnabled) console.log('UnifiedJobService: Data saved - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
     } catch (error) {
       console.error('Failed to save data in UnifiedJobService:', error);
     }
@@ -738,11 +743,15 @@ class UnifiedJobService {
   }
 
   getJobsByCustomer(customerId) {
-    console.log('UnifiedJobService - getJobsByCustomer called with:', customerId);
-    console.log('UnifiedJobService - All jobs:', this.jobs.length, this.jobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
+    if (this.debugEnabled) {
+      console.log('UnifiedJobService - getJobsByCustomer called with:', customerId);
+      console.log('UnifiedJobService - All jobs:', this.jobs.length, this.jobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
+    }
     
     const filteredJobs = this.jobs.filter(job => job.customerId === customerId);
-    console.log('UnifiedJobService - Filtered jobs for customer:', filteredJobs.length, filteredJobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
+    if (this.debugEnabled) {
+      console.log('UnifiedJobService - Filtered jobs for customer:', filteredJobs.length, filteredJobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
+    }
     
     return filteredJobs;
   }

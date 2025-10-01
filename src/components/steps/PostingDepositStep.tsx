@@ -15,7 +15,7 @@ import { StepComponentProps, PaymentData, PaymentResult } from '../../types/JobT
 import { useTheme } from '../../contexts/ThemeContext';
 import { createJobStyles } from '../../styles/CreateJobScreenStyles';
 import IconFallback from '../shared/IconFallback';
-import { paymentService } from '../../services/PaymentService';
+import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { useStripeHook, useElementsHook, StripeUtils } from '../../providers/StripeProvider';
 import { makeStripeRequest } from '../../config/stripeBackend';
 import { MOCK_MODE } from '../../config/payment';

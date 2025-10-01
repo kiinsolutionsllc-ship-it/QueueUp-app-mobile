@@ -13,7 +13,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import IconFallback from '../../components/shared/IconFallback';
 import { FadeIn } from '../../components/shared/Animations';
-import PaymentService from '../../services/PaymentService';
+import paymentServiceNew from '../../services/PaymentServiceNew';
 
 const CommissionManagementScreen = ({ navigation }) => {
   const { getCurrentTheme } = useTheme();
@@ -33,7 +33,7 @@ const CommissionManagementScreen = ({ navigation }) => {
     try {
       setLoading(true);
       // For development, use mock data
-      const mockPayouts = (PaymentService as any).getMockPayouts(user?.id || 'MECHANIC-20241201-143000-0001');
+      const mockPayouts = (paymentServiceNew as any).getMockPayouts(user?.id || 'MECHANIC-20241201-143000-0001');
       setPayouts(mockPayouts);
       
       // In production, use real API:

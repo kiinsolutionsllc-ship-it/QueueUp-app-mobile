@@ -17,7 +17,7 @@ import IconFallback from '../../components/shared/IconFallback';
 import { FadeIn } from '../../components/shared/Animations';
 import { hapticService } from '../../services/HapticService';
 import { useStripeHook } from '../../providers/StripeProvider';
-import { PaymentService } from '../../services/PaymentService';
+import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { MOCK_MODE } from '../../config/payment';
 // JobAssignmentService removed - using UnifiedJobService through SimplifiedJobContext
 
@@ -28,7 +28,7 @@ const EscrowPaymentScreen = ({ navigation, route }) => {
 
   // Stripe integration
   const stripe = useStripeHook();
-  const paymentService = new PaymentService();
+  // Use merged payment service (singleton)
 
   const { job, bid } = route.params;
   const [loading, setLoading] = useState<any>(false);
@@ -153,7 +153,7 @@ const EscrowPaymentScreen = ({ navigation, route }) => {
       
     } catch (error) {
       setPaymentStep('error');
-      setPaymentError(error.message || 'Payment failed. Please try again.');
+      setPaymentError((error instanceof Error ? error.message : 'Unknown error') || 'Payment failed. Please try again.');
       await hapticService.error();
     } finally {
       setLoading(false);

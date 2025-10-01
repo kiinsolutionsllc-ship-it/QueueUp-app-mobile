@@ -2,18 +2,24 @@
 // Handles push notifications for immediate awareness of important events
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Detect Expo Go environment
+const IS_EXPO_GO = Constants?.appOwnership === 'expo';
+
+// Configure notification behavior (disabled in Expo Go)
+if (!IS_EXPO_GO) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 const PUSH_TOKEN_STORAGE_KEY = 'expo_push_token';
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences';
@@ -37,14 +43,23 @@ class PushNotificationService {
   async initialize() {
     if (this.isInitialized) return;
     
-    // Push notifications are disabled
-    console.log('PushNotificationService: Push notifications are disabled');
+    // Skip remote push setup in Expo Go (SDK 53+ removed remote push support in Expo Go)
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Skipping remote push setup in Expo Go');
+      this.isInitialized = true;
+      return;
+    }
+
+    // Remote push setup can be added here for dev builds/production apps if needed
     this.isInitialized = true;
-    return;
   }
 
   // Register for push notifications
   async registerForPushNotificationsAsync() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: register skipped in Expo Go');
+      return null;
+    }
     let token;
 
     if (Platform.OS === 'android') {
@@ -86,6 +101,11 @@ class PushNotificationService {
 
   // Set up notification listeners
   setupNotificationListeners() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Notification listeners skipped in Expo Go');
+      return;
+    }
+
     // Handle notifications received while app is foregrounded
     Notifications.addNotificationReceivedListener(notification => {
       console.log('Notification received:', notification);
@@ -186,6 +206,11 @@ class PushNotificationService {
 
   // Schedule local notification
   async scheduleLocalNotification(title, body, trigger, data = {}) {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Local notification scheduling skipped in Expo Go');
+      return { success: false, error: 'Notifications disabled in Expo Go' };
+    }
+
     try {
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -223,6 +248,11 @@ class PushNotificationService {
 
   // Cancel scheduled notification
   async cancelScheduledNotification(notificationId) {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Cancel notification skipped in Expo Go');
+      return { success: true };
+    }
+
     try {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
       console.log('Scheduled notification cancelled:', notificationId);
@@ -235,6 +265,11 @@ class PushNotificationService {
 
   // Cancel all scheduled notifications
   async cancelAllScheduledNotifications() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Cancel all notifications skipped in Expo Go');
+      return { success: true };
+    }
+
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
       console.log('All scheduled notifications cancelled');
@@ -281,18 +316,30 @@ class PushNotificationService {
 
   // Check if notifications are enabled
   async areNotificationsEnabled() {
+    if (IS_EXPO_GO) {
+      return false; // Always return false in Expo Go
+    }
     const { status } = await Notifications.getPermissionsAsync();
     return status === 'granted';
   }
 
   // Request notification permissions
   async requestNotificationPermissions() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Permission request skipped in Expo Go');
+      return false;
+    }
     const { status } = await Notifications.requestPermissionsAsync();
     return status === 'granted';
   }
 
   // Get notification history
   async getNotificationHistory() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Notification history skipped in Expo Go');
+      return { success: true, notifications: [] };
+    }
+
     try {
       const notifications = await Notifications.getAllScheduledNotificationsAsync();
       return { success: true, notifications };
@@ -304,6 +351,11 @@ class PushNotificationService {
 
   // Clear all notifications
   async clearAllNotifications() {
+    if (IS_EXPO_GO) {
+      console.log('PushNotificationService: Clear notifications skipped in Expo Go');
+      return { success: true };
+    }
+
     try {
       await Notifications.dismissAllNotificationsAsync();
       return { success: true };

@@ -11,12 +11,16 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -28,6 +32,7 @@ import { Conversation, Message } from '../../types/MessagingTypes';
 
 interface UnifiedMessagingScreenProps {
   navigation: any;
+  route?: any;
   conversations?: Conversation[];
   onConversationSelect?: (conversation: Conversation) => void;
 }
@@ -49,107 +54,43 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false);
   const [showConversationModal, setShowConversationModal] = useState<boolean>(false);
 
-  // Use prop conversations or fallback to mock data
-  const conversations: Conversation[] = propConversations || [
-    {
-      id: '1',
-      participants: ['MECHANIC-20240125-143022-1234', getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)],
-      jobId: 'job1',
-      type: 'job_related',
-      title: 'John Mechanic',
-      lastMessage: 'I can help you with that brake issue',
-      lastMessageTime: '2024-01-25T10:30:00Z',
-      unreadCounts: { [getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)]: 2 },
-      isPinned: false,
-      isArchived: false,
-      isMuted: false,
-      createdAt: '2024-01-25T10:00:00Z',
-      updatedAt: '2024-01-25T10:30:00Z',
-      metadata: {
-        jobTitle: 'Brake Repair',
-        mechanicName: 'John Mechanic',
-        vehicleInfo: '2020 Honda Civic',
-        priority: 'medium',
-      },
-    },
-    {
-      id: '2',
-      participants: ['CUSTOMER-20240125-143022-5678', getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)],
-      jobId: 'job2',
-      type: 'job_related',
-      title: 'Sarah Customer',
-      lastMessage: 'When can you come by?',
-      lastMessageTime: '2024-01-25T09:15:00Z',
-      unreadCounts: { [getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)]: 0 },
-      isPinned: false,
-      isArchived: false,
-      isMuted: false,
-      createdAt: '2024-01-25T09:00:00Z',
-      updatedAt: '2024-01-25T09:15:00Z',
-      metadata: {
-        jobTitle: 'Oil Change',
-        customerName: 'Sarah Customer',
-        vehicleInfo: '2019 Toyota Camry',
-        priority: 'low',
-      },
-    },
-  ];
+  // Use prop conversations or start with empty array
+  const conversations: Conversation[] = propConversations || [];
 
-  // Mock messages data
-  const mockMessages: Message[] = [
-    {
-      id: '1',
-      conversationId: 'conv-1',
-      text: 'Hi! I need help with my car brakes',
-      content: 'Hi! I need help with my car brakes',
-      senderId: user?.id || 'CUSTOMER-20240125-143022-5678', // Internal ID
-      senderName: user?.name || 'You', // Display name
-      senderRole: 'customer',
-      timestamp: '2024-01-25T10:00:00Z',
-      type: 'text',
-      status: 'read',
-      isRead: true,
-    },
-    {
-      id: '2',
-      conversationId: 'conv-1',
-      text: 'I can help you with that brake issue',
-      content: 'I can help you with that brake issue',
-      senderId: 'MECHANIC-20240125-143022-1234', // Internal ID
-      senderName: 'John Mechanic', // Display name
-      senderRole: 'mechanic',
-      timestamp: '2024-01-25T10:30:00Z',
-      type: 'text',
-      status: 'sent',
-      isRead: false,
-    },
-    {
-      id: '3',
-      conversationId: 'conv-1',
-      text: 'Great! When are you available?',
-      content: 'Great! When are you available?',
-      senderId: user?.id || 'CUSTOMER-20240125-143022-5678', // Internal ID
-      senderName: user?.name || 'You', // Display name
-      senderRole: 'customer',
-      timestamp: '2024-01-25T10:35:00Z',
-      type: 'text',
-      status: 'read',
-      isRead: true,
-    },
-  ];
+
+  // Load persisted messages on component mount
+  useEffect(() => {
+    const loadPersistedMessages = async () => {
+      try {
+        const storedMessages = await AsyncStorage.getItem('persisted_messages');
+        if (storedMessages) {
+          const parsedMessages = JSON.parse(storedMessages);
+          Object.assign(globalMessages, parsedMessages);
+        }
+      } catch (error) {
+        console.error('Error loading persisted messages:', error);
+      }
+    };
+    
+    loadPersistedMessages();
+  }, []);
 
   useEffect(() => {
     if (selectedConversation) {
-      setMessages(mockMessages);
+      // Load existing messages for this conversation
+      const existingMessages = globalMessages[selectedConversation.id] || [];
+      setMessages(existingMessages);
+    } else {
+      setMessages([]);
     }
   }, [selectedConversation]);
 
   const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedConversation) return;
 
     const message: Message = {
       id: Date.now().toString(),
-      conversationId: selectedConversation?.id || 'conv-1',
+      conversationId: selectedConversation.id,
       text: newMessage.trim(),
       content: newMessage.trim(),
       senderId: user?.id || 'current',
@@ -157,11 +98,35 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
       senderRole: user?.user_type === 'mechanic' ? 'mechanic' : 'customer',
       timestamp: new Date().toISOString(),
       type: 'text',
-      status: 'sending',
+      status: 'sent',
       isRead: true,
     };
 
+    // Add to local messages state
     setMessages(prev => [...prev, message]);
+    
+    // Store in global messages
+    if (!globalMessages[selectedConversation.id]) {
+      globalMessages[selectedConversation.id] = [];
+    }
+    globalMessages[selectedConversation.id].push(message);
+    
+    // Persist messages to AsyncStorage
+    AsyncStorage.setItem('persisted_messages', JSON.stringify(globalMessages)).catch(console.error);
+    
+    // Update conversation's last message
+    const convKey = Object.keys(globalConversations).find(key => 
+      globalConversations[key].id === selectedConversation.id
+    );
+    if (convKey) {
+      globalConversations[convKey] = {
+        ...globalConversations[convKey],
+        lastMessage: newMessage.trim(),
+        lastMessageTime: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    
     setNewMessage('');
   };
 
@@ -178,6 +143,16 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
     setActiveTab('conversations');
     setSelectedConversation(null);
   };
+
+  // Handle notifications icon
+  const handleNotifications = useCallback(() => {
+    navigation.navigate('Notifications');
+  }, [navigation]);
+
+  // Handle profile icon
+  const handleProfile = useCallback(() => {
+    navigation.navigate('Profile');
+  }, [navigation]);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -200,9 +175,27 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
         </View>
         <View style={styles.conversationInfo}>
           <View style={styles.conversationNameRow}>
-            <Text style={[styles.conversationName, { color: theme.text }]}>
-              {conversation.title}
-            </Text>
+            <View style={styles.nameAndJobRow}>
+              <Text style={[styles.conversationName, { color: theme.text }]}>
+                {capitalizeText(conversation.title)}
+              </Text>
+              {conversation.metadata?.jobTitle && (
+                <>
+                  <Text style={[styles.jobSeparator, { color: theme.textSecondary }]}> • </Text>
+                  <Text style={[styles.jobTitle, { color: theme.textSecondary }]}>
+                    {formatJobTitle(conversation.metadata.jobTitle)}
+                  </Text>
+                </>
+              )}
+              {conversation.jobId && (
+                <>
+                  <Text style={[styles.jobSeparator, { color: theme.textSecondary }]}> • </Text>
+                  <Text style={[styles.jobId, { color: theme.textSecondary }]}>
+                    #{conversation.jobId.slice(-6)}
+                  </Text>
+                </>
+              )}
+            </View>
             <Text style={[styles.conversationTime, { color: theme.textSecondary }]}>
               {formatTime(conversation.lastMessageTime)}
             </Text>
@@ -305,25 +298,11 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ModernHeader
-        title={selectedConversation?.title || 'Chat'}
+        title={selectedConversation?.title ? capitalizeText(selectedConversation.title) : 'Chat'}
         showBack={true}
         onBackPress={handleBackToConversations}
-        rightActions={[
-          {
-            icon: 'call',
-            onPress: () => {
-              // Call functionality - could integrate with phone dialer
-              Alert.alert('Call', 'Call functionality would be implemented here');
-            },
-          },
-          {
-            icon: 'more-vert',
-            onPress: () => {
-              // More options menu - could show conversation settings, etc.
-              Alert.alert('Options', 'More options would be available here');
-            },
-          },
-        ]}
+        onNotificationPress={handleNotifications}
+        onProfilePress={handleProfile}
       />
 
       <View style={styles.chatContainer}>
@@ -383,6 +362,10 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
   );
 };
 
+// Global conversation storage to share between users
+const globalConversations: { [key: string]: Conversation } = {};
+const globalMessages: { [key: string]: Message[] } = {};
+
 // Add the ConversationModal component
 const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (props) => {
   const { getCurrentTheme } = useTheme();
@@ -393,65 +376,226 @@ const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (
   const [showConversationModal, setShowConversationModal] = useState<boolean>(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
-  // Initialize conversations data
+  // Initialize conversations data - load from persistent storage
   useEffect(() => {
-    const initialConversations: Conversation[] = [
-      {
-        id: '1',
-        participants: ['MECHANIC-20240125-143022-1234', getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)],
-        jobId: 'job1',
-        type: 'job_related',
-        title: 'John Mechanic',
-        lastMessage: 'I can help you with that brake issue',
-        lastMessageTime: '2024-01-25T10:30:00Z',
-        unreadCounts: { [getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)]: 2 },
-        isPinned: false,
-        isArchived: false,
-        isMuted: false,
-        createdAt: '2024-01-25T10:00:00Z',
-        updatedAt: '2024-01-25T10:30:00Z',
-        metadata: {
-          jobTitle: 'Brake Repair',
-          mechanicName: 'John Mechanic',
-          vehicleInfo: '2020 Honda Civic',
-          priority: 'medium',
-        },
-      },
-      {
-        id: '2',
-        participants: ['CUSTOMER-20240125-143022-5678', getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)],
-        jobId: 'job2',
-        type: 'job_related',
-        title: 'Sarah Customer',
-        lastMessage: 'When can you come by?',
-        lastMessageTime: '2024-01-25T09:15:00Z',
-        unreadCounts: { [getFallbackUserIdWithTypeDetection(user?.id, user?.user_type)]: 0 },
-        isPinned: false,
-        isArchived: false,
-        isMuted: false,
-        createdAt: '2024-01-25T09:00:00Z',
-        updatedAt: '2024-01-25T09:15:00Z',
-        metadata: {
-          jobTitle: 'Oil Change',
-          customerName: 'Sarah Customer',
-          vehicleInfo: '2019 Toyota Camry',
-          priority: 'low',
-        },
-      },
-    ];
-    setConversations(initialConversations);
+    const loadPersistedConversations = async () => {
+      try {
+        // Try to load from AsyncStorage first
+        const storedConversations = await AsyncStorage.getItem('persisted_conversations');
+        if (storedConversations) {
+          const parsedConversations = JSON.parse(storedConversations);
+          setConversations(parsedConversations);
+          
+          // Also populate global storage for current session
+          parsedConversations.forEach((conv: Conversation) => {
+            const convKey = `${conv.jobId}-${conv.participants.sort().join('-')}`;
+            globalConversations[convKey] = conv;
+          });
+        } else {
+          // Fallback to global storage
+          const globalConvs = Object.values(globalConversations);
+          setConversations(globalConvs);
+        }
+      } catch (error) {
+        console.error('Error loading persisted conversations:', error);
+        // Fallback to global storage
+        const globalConvs = Object.values(globalConversations);
+        setConversations(globalConvs);
+      }
+    };
+    
+    loadPersistedConversations();
   }, [user?.id]);
+
+  // Set up notification listeners
+  useEffect(() => {
+    // Handle notification received while app is foregrounded
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+      // You can handle foreground notifications here if needed
+    });
+
+    // Handle notification responses (when user taps notification)
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification response:', response);
+      const data = response.notification.request.content.data;
+      
+      if (data?.conversationId) {
+        // Find the conversation and open it
+        const conversation = conversations.find(conv => conv.id === data.conversationId);
+        if (conversation) {
+          setSelectedConversation(conversation);
+          setShowConversationModal(true);
+        }
+      }
+    });
+
+    return () => {
+      // Remove listeners using the correct method
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  }, [conversations]);
+
+  // Helper: find or create a conversation by jobId and participants
+  const findOrCreateLocalConversation = useCallback((participants: string[], jobId: string, title?: string, jobTitle?: string) => {
+    if (!participants || participants.length < 2 || !jobId) return null;
+
+    // Ensure current user is included
+    const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+    const normalizedParticipants = Array.from(new Set([...
+      participants,
+      currentUserId,
+    ]));
+
+    // Create a unique key for this conversation
+    const convKey = `${jobId}-${normalizedParticipants.sort().join('-')}`;
+
+    // Try to find existing conversation in global storage
+    if (globalConversations[convKey]) {
+      return globalConversations[convKey];
+    }
+
+    // Create new conversation
+    const newConv: Conversation = {
+      id: `conv-${jobId}-${Date.now()}`,
+      participants: normalizedParticipants,
+      jobId,
+      type: 'job_related',
+      title: title || 'Conversation',
+      lastMessage: '',
+      lastMessageTime: new Date().toISOString(),
+      unreadCounts: {},
+      isPinned: false,
+      isArchived: false,
+      isMuted: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata: {
+        jobTitle: jobTitle || title || '',
+        customerName: title?.includes('Customer') ? title : undefined,
+        mechanicName: title?.includes('Mechanic') ? title : undefined,
+      },
+    };
+
+    // Store in global storage
+    globalConversations[convKey] = newConv;
+    globalMessages[newConv.id] = [];
+
+    // Update local state
+    setConversations(prev => {
+      const updated = [newConv, ...prev];
+      // Persist to AsyncStorage
+      AsyncStorage.setItem('persisted_conversations', JSON.stringify(updated)).catch(console.error);
+      return updated;
+    });
+    return newConv;
+  }, [user?.id, user?.user_type]);
+
+  // If navigated here with params to start a conversation, ensure it exists and open modal
+  useEffect(() => {
+    const params = (props as any)?.route?.params;
+    if (params?.startConversation) {
+      const { participants, jobId, title, jobTitle } = params.startConversation;
+      console.log('UnifiedMessagingScreen - Creating conversation with:', { participants, jobId, title, jobTitle });
+      const conv = findOrCreateLocalConversation(participants, jobId, title, jobTitle);
+      if (conv) {
+        console.log('UnifiedMessagingScreen - Created conversation:', conv);
+        setSelectedConversation(conv);
+        setShowConversationModal(true);
+      }
+    }
+  }, [props, findOrCreateLocalConversation]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setShowConversationModal(true);
   };
 
+  // Send notification for new messages
+  const sendMessageNotification = useCallback(async (message: string, conversation: Conversation) => {
+    try {
+      // Get sender info
+      const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+      const senderRole = user?.role || 'customer';
+      const senderName = senderRole === 'customer' ? 'Customer' : 'Mechanic';
+      const jobTitle = conversation.metadata?.jobTitle || 'Service Request';
+      
+      // Find the recipient (the other participant in the conversation)
+      const recipientId = conversation.participants.find((id: string) => id !== currentUserId);
+      
+      if (!recipientId) {
+        console.warn('No recipient found for message notification');
+        return;
+      }
+
+      // Import NotificationService dynamically to avoid circular dependencies
+      const NotificationService = (await import('../../services/NotificationService')).default;
+      
+      // Send in-app notification to the recipient
+      await NotificationService.createNotification({
+        userId: recipientId,
+        type: 'new_message',
+        title: `New message from ${senderName}`,
+        message: message,
+        jobId: conversation.jobId,
+        conversationId: conversation.id,
+        priority: 'medium',
+        actionRequired: false,
+        category: 'message',
+        data: {
+          conversationId: conversation.id,
+          jobId: conversation.jobId,
+          jobTitle: jobTitle,
+          senderId: currentUserId,
+          senderRole: senderRole,
+          senderName: senderName,
+          messageContent: message,
+        }
+      });
+
+      // Also send local push notification for immediate visibility
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `New message from ${senderName}`,
+          body: message,
+          data: {
+            conversationId: conversation.id,
+            jobId: conversation.jobId,
+            jobTitle: jobTitle,
+            senderId: currentUserId,
+            senderRole: senderRole,
+          },
+          sound: 'default',
+        },
+        trigger: null, // Show immediately
+      });
+
+      console.log('Message notification sent to recipient:', recipientId, 'Content:', message);
+    } catch (error) {
+      console.error('Error sending message notification:', error);
+    }
+  }, [user?.id, user?.user_type, user?.role]);
+
   const handleMessageSent = (newMessage?: string) => {
     // Update the conversation's last message and timestamp
     if (selectedConversation && newMessage) {
-      setConversations(prev => 
-        prev.map(conv => 
+      // Update global conversation
+      const convKey = Object.keys(globalConversations).find(key => 
+        globalConversations[key].id === selectedConversation.id
+      );
+      if (convKey) {
+        globalConversations[convKey] = {
+          ...globalConversations[convKey],
+          lastMessage: newMessage,
+          lastMessageTime: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      // Update local state
+      setConversations(prev => {
+        const updated = prev.map(conv => 
           conv.id === selectedConversation.id 
             ? {
                 ...conv,
@@ -460,8 +604,14 @@ const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (
                 updatedAt: new Date().toISOString(),
               }
             : conv
-        )
-      );
+        );
+        // Persist to AsyncStorage
+        AsyncStorage.setItem('persisted_conversations', JSON.stringify(updated)).catch(console.error);
+        return updated;
+      });
+
+      // Send notification
+      sendMessageNotification(newMessage, selectedConversation);
     }
     console.log('Message sent in conversation modal');
   };
@@ -537,9 +687,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  nameAndJobRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
   conversationName: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  jobSeparator: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  jobTitle: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  jobId: {
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: 'monospace',
   },
   conversationTime: {
     fontSize: 12,

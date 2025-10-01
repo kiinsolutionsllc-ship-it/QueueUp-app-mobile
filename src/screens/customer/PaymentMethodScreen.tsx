@@ -19,7 +19,7 @@ import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
 import MaterialTextInput from '../../components/shared/MaterialTextInput';
 import { useStripeHook, useElementsHook } from '../../providers/StripeProvider';
-import { PaymentService } from '../../services/PaymentService';
+import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { MOCK_MODE } from '../../config/payment';
 
 
@@ -35,7 +35,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
   // Stripe hooks
   const stripe = useStripeHook();
   const elements = useElementsHook();
-  const paymentService = new PaymentService();
+  // Use merged payment service (singleton)
 
   const [showAddCard, setShowAddCard] = useState<any>(false);
   const [selectedMethod, setSelectedMethod] = useState<any>(null);
@@ -147,7 +147,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
       await loadPaymentMethods();
     } catch (error) {
       console.error('Error adding payment method:', error);
-      Alert.alert('Error', error.message || 'Failed to add payment method');
+      Alert.alert('Error', (error instanceof Error ? error.message : 'Unknown error') || 'Failed to add payment method');
     } finally {
       setAddingCard(false);
     }

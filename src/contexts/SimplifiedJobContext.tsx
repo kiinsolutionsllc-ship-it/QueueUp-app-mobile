@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import UnifiedJobService from '../services/UnifiedJobService';
+const DEBUG_JOBS = false;
 import { Message } from '../types/MessagingTypes';
 
 // Type definitions for job-related data
@@ -167,18 +168,18 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
   // Refresh data from UnifiedJobService
   const refreshData = async (): Promise<void> => {
     try {
-      console.log('SimplifiedJobContext - Starting data refresh...');
+      if (DEBUG_JOBS) console.log('SimplifiedJobContext - Starting data refresh...');
       await UnifiedJobService.refresh();
       
       const allJobs = UnifiedJobService.getAllJobs();
-      console.log('SimplifiedJobContext - Retrieved jobs from service:', allJobs.length, allJobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
+      if (DEBUG_JOBS) console.log('SimplifiedJobContext - Retrieved jobs from service:', allJobs.length, allJobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
       
       setJobs(allJobs);
       setBids(UnifiedJobService.getAllBids());
       setMessages(UnifiedJobService.messages);
       setJobHistory(UnifiedJobService.jobHistory);
       
-      console.log('SimplifiedJobContext - Data refresh completed. Jobs state updated.');
+      if (DEBUG_JOBS) console.log('SimplifiedJobContext - Data refresh completed. Jobs state updated.');
     } catch (error) {
       console.error('SimplifiedJobContext: Error refreshing data:', error);
     }
@@ -466,7 +467,7 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
         };
       } catch (error) {
         console.error('SimplifiedJobContext - Error resetting and creating test accounts:', error);
-        return { success: false, message: 'Error: ' + error.message };
+        return { success: false, message: 'Error: ' + (error instanceof Error ? error.message : 'Unknown error') };
       }
     }
   };
