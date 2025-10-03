@@ -104,7 +104,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
   const [additionalSettingsExpanded, setAdditionalSettingsExpanded] = useState<any>(false);
 
   // Animation helper functions
-  const animateCardPress = (cardKey, callback) => {
+  const animateCardPress = (cardKey: string, callback: () => void) => {
     Animated.sequence([
       Animated.timing(cardAnimations[cardKey], {
         toValue: 0.95,
@@ -121,7 +121,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
     });
   };
 
-  const animateButtonPress = (buttonKey, callback) => {
+  const animateButtonPress = (buttonKey: string, callback: () => void) => {
     Animated.sequence([
       Animated.timing(buttonAnimations[buttonKey], {
         toValue: 0.9,
@@ -159,11 +159,11 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
     ]).start();
   }, []);
 
-  const applyMarketAdjustment = (percentage) => {
+  const applyMarketAdjustment = (percentage: any) => {
     const adjustment = percentage / 100;
     
     // Apply adjustment to hourly rates
-    setPricing(prev => ({
+    setPricing((prev: any) => ({
       ...prev,
       hourlyRate: Math.round(prev.hourlyRate * (1 + adjustment)),
       emergencyRate: Math.round(prev.emergencyRate * (1 + adjustment)),
@@ -175,7 +175,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
     }));
 
     // Apply adjustment to job pricing
-    setJobPricing(prev => ({
+    setJobPricing((prev: any) => ({
       ...prev,
       oilChange: Math.round(prev.oilChange * (1 + adjustment)),
       brakeService: Math.round(prev.brakeService * (1 + adjustment)),
@@ -279,7 +279,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
     );
   };
 
-  const DropdownRateRow = ({ title, value, icon, rateKey, suffix = '$' }) => {
+  const DropdownRateRow = ({ title, value, icon, rateKey, suffix = '$' }: any) => {
     const isSelected = selectedRate === rateKey;
     
     return (
@@ -317,7 +317,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
     );
   };
 
-  const SettingToggle = ({ title, subtitle, value, onValueChange, icon }) => {
+  const SettingToggle = ({ title, subtitle, value, onValueChange, icon }: any) => {
     return (
       <View style={[styles.settingRow, { borderBottomColor: theme.border }]}>
         <View style={styles.settingRowLeft}>
@@ -720,7 +720,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Show Tax Included"
                   subtitle="Display prices with tax included"
                   value={additionalSettings.showTaxIncluded}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, showTaxIncluded: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, showTaxIncluded: value})}
                   icon="receipt"
                 />
                 
@@ -728,7 +728,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Show Earnings"
                   subtitle="Display estimated earnings on jobs"
                   value={additionalSettings.showEarnings}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, showEarnings: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, showEarnings: value})}
                   icon="account-balance-wallet"
                 />
                 
@@ -736,7 +736,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Show Competitor Rates"
                   subtitle="Display local competitor pricing"
                   value={additionalSettings.showCompetitorRates}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, showCompetitorRates: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, showCompetitorRates: value})}
                   icon="compare"
                 />
               </View>
@@ -749,7 +749,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Show Discounts"
                   subtitle="Display available discounts to customers"
                   value={additionalSettings.showDiscounts}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, showDiscounts: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, showDiscounts: value})}
                   icon="local-offer"
                 />
                 
@@ -757,7 +757,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Auto Apply Discounts"
                   subtitle="Automatically apply eligible discounts"
                   value={additionalSettings.autoApplyDiscounts}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, autoApplyDiscounts: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, autoApplyDiscounts: value})}
                   icon="auto-fix-high"
                 />
               </View>
@@ -770,7 +770,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Price Notifications"
                   subtitle="Get notified about pricing changes"
                   value={additionalSettings.priceNotifications}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, priceNotifications: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, priceNotifications: value})}
                   icon="notifications"
                 />
                 
@@ -778,7 +778,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Low Rate Alerts"
                   subtitle="Alert when rates are below market average"
                   value={additionalSettings.lowRateAlerts}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, lowRateAlerts: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, lowRateAlerts: value})}
                   icon="warning"
                 />
                 
@@ -786,7 +786,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Rate Change Confirmations"
                   subtitle="Confirm before applying rate changes"
                   value={additionalSettings.rateChangeConfirmations}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, rateChangeConfirmations: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, rateChangeConfirmations: value})}
                   icon="check-circle"
                 />
               </View>
@@ -799,7 +799,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Weekend Pricing"
                   subtitle="Apply weekend rates automatically"
                   value={additionalSettings.weekendPricing}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, weekendPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, weekendPricing: value})}
                   icon="weekend"
                 />
                 
@@ -807,7 +807,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Holiday Pricing"
                   subtitle="Apply holiday rates automatically"
                   value={additionalSettings.holidayPricing}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, holidayPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, holidayPricing: value})}
                   icon="celebration"
                 />
                 
@@ -815,7 +815,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Emergency Pricing"
                   subtitle="Apply emergency rates for urgent jobs"
                   value={additionalSettings.emergencyPricing}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, emergencyPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, emergencyPricing: value})}
                   icon="emergency"
                 />
               </View>
@@ -828,7 +828,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Deposit Required"
                   subtitle="Require deposit before starting work"
                   value={additionalSettings.depositRequired}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, depositRequired: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, depositRequired: value})}
                   icon="account-balance"
                 />
               </View>
@@ -841,7 +841,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Dynamic Pricing"
                   subtitle="Adjust rates based on demand and availability"
                   value={additionalSettings.dynamicPricing || false}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, dynamicPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, dynamicPricing: value})}
                   icon="trending-up"
                 />
                 
@@ -849,7 +849,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Peak Hours Pricing"
                   subtitle="Apply higher rates during peak hours"
                   value={additionalSettings.peakHoursPricing || false}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, peakHoursPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, peakHoursPricing: value})}
                   icon="schedule"
                 />
                 
@@ -857,7 +857,7 @@ export default function PricingManagementScreen({ navigation }: PricingManagemen
                   title="Distance-Based Pricing"
                   subtitle="Adjust rates based on travel distance"
                   value={additionalSettings.distanceBasedPricing || false}
-                  onValueChange={(value) => setAdditionalSettings({...additionalSettings, distanceBasedPricing: value})}
+                  onValueChange={(value: any) => setAdditionalSettings({...additionalSettings, distanceBasedPricing: value})}
                   icon="my-location"
                 />
               </View>

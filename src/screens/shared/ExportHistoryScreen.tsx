@@ -12,7 +12,7 @@ import IconFallback from '../../components/shared/IconFallback';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -77,17 +77,17 @@ export default function ExportHistoryScreen({ navigation }: ExportHistoryScreenP
     return mockJobs;
   };
 
-  const generateCSV = (jobs) => {
+  const generateCSV = (jobs: any) => {
     const headers = 'Job ID,Title,Customer,Date,Price,Status,Rating\n';
-    const rows = jobs.map(job => 
+    const rows = jobs.map((job: any) => 
       `${job.id},"${job.title}","${job.customer}",${job.date},${job.price},${job.status},${job.rating}`
     ).join('\n');
     return headers + rows;
   };
 
-  const generatePDF = (jobs) => {
+  const generatePDF = (jobs: any) => {
     // In a real app, you would use a PDF generation library
-    return `Job History Report\n\n${jobs.map(job => 
+    return `Job History Report\n\n${jobs.map((job: any) => 
       `Job: ${job.title}\nCustomer: ${job.customer}\nDate: ${job.date}\nPrice: $${job.price}\nStatus: ${job.status}\nRating: ${job.rating}/5\n\n`
     ).join('')}`;
   };
@@ -150,7 +150,7 @@ export default function ExportHistoryScreen({ navigation }: ExportHistoryScreenP
     }
   };
 
-  const renderFormatOption = (format) => (
+  const renderFormatOption = (format: any) => (
     <TouchableOpacity
       key={format.value}
       style={[
@@ -177,7 +177,7 @@ export default function ExportHistoryScreen({ navigation }: ExportHistoryScreenP
     </TouchableOpacity>
   );
 
-  const renderDateRangeOption = (range) => (
+  const renderDateRangeOption = (range: any) => (
     <TouchableOpacity
       key={range.value}
       style={[

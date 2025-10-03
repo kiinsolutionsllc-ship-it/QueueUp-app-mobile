@@ -1,6 +1,7 @@
 // AsyncStorage removed - using Supabase only
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import { MOCK_MODE } from '../config/payment';
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
 
 /**
  * SUBSCRIPTION SERVICE
@@ -81,24 +82,151 @@ class SubscriptionService {
     }
   }
 
-  async loadData() {
+  // Load public subscription plans (can be accessed before authentication)
+  async loadPublicData() {
     try {
-      // Subscription data is now managed in memory only
-      this.subscriptionPlans = [];
-      this.userSubscriptions = [];
-      this.subscriptionPayments = [];
-      this.subscriptionUsage = [];
-      this.trialHistory = [];
-      this.abusePrevention = {
-        emailTrialCount: {},
-        deviceFingerprints: {},
-        ipAddresses: {},
-        paymentMethods: {},
-        cooldownPeriods: {}
-      };
+      if (MOCK_MODE) {
+        // Subscription plans are public data
+        this.subscriptionPlans = [];
+      } else {
+        if (!safeSupabase) {
+          console.warn('SubscriptionService: Supabase not configured, using empty plans');
+          this.subscriptionPlans = [];
+          return;
+        }
+
+        // Load subscription plans (public pricing information)
+        const { data: plansData, error: plansError } = await safeSupabase
+          .from(TABLES.SUBSCRIPTION_PLANS)
+          .select('*')
+          .eq('is_active', true)
+          .order('price', { ascending: true });
+
+        if (plansError) {
+          console.error('SubscriptionService: Error loading subscription plans:', plansError);
+        } else {
+          this.subscriptionPlans = plansData || [];
+          console.log(`SubscriptionService: Loaded ${this.subscriptionPlans.length} subscription plans`);
+        }
+      }
     } catch (error) {
-      console.error('SubscriptionService: Error loading data:', error);
+      console.error('SubscriptionService: Error loading public data:', error);
+      this.subscriptionPlans = [];
     }
+  }
+
+  // Load user-specific subscription data (requires authentication)
+  async loadUserData(userId) {
+    if (!userId) {
+      console.log('SubscriptionService: No user ID provided, skipping user data load');
+      return;
+    }
+
+    console.log('SubscriptionService: Loading subscription data for user:', userId);
+    
+    try {
+      if (MOCK_MODE) {
+        // User-specific data is now managed in memory only for mock mode
+        this.userSubscriptions = [];
+        this.subscriptionPayments = [];
+        this.subscriptionUsage = [];
+        this.trialHistory = [];
+        this.abusePrevention = {
+          emailTrialCount: {},
+          deviceFingerprints: {},
+          ipAddresses: {},
+          paymentMethods: {},
+          cooldownPeriods: {}
+        };
+      } else {
+        if (!safeSupabase) {
+          console.warn('SubscriptionService: Supabase not configured, using memory storage');
+          this.userSubscriptions = [];
+          this.subscriptionPayments = [];
+          this.subscriptionUsage = [];
+          this.trialHistory = [];
+          this.abusePrevention = {
+            emailTrialCount: {},
+            deviceFingerprints: {},
+            ipAddresses: {},
+            paymentMethods: {},
+            cooldownPeriods: {}
+          };
+          return;
+        }
+
+        // Load user's subscriptions
+        const { data: subscriptionsData, error: subscriptionsError } = await safeSupabase
+          .from(TABLES.USER_SUBSCRIPTIONS)
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (subscriptionsError) {
+          console.error('SubscriptionService: Error loading user subscriptions:', subscriptionsError);
+        } else {
+          this.userSubscriptions = subscriptionsData || [];
+        }
+
+        // Load user's subscription payments
+        const { data: paymentsData, error: paymentsError } = await safeSupabase
+          .from(TABLES.SUBSCRIPTION_PAYMENTS)
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (paymentsError) {
+          console.error('SubscriptionService: Error loading subscription payments:', paymentsError);
+        } else {
+          this.subscriptionPayments = paymentsData || [];
+        }
+
+        // Load user's subscription usage
+        const { data: usageData, error: usageError } = await safeSupabase
+          .from(TABLES.SUBSCRIPTION_USAGE)
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (usageError) {
+          console.error('SubscriptionService: Error loading subscription usage:', usageError);
+        } else {
+          this.subscriptionUsage = usageData || [];
+        }
+
+        // Load user's trial history
+        const { data: trialData, error: trialError } = await safeSupabase
+          .from(TABLES.TRIAL_HISTORY)
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (trialError) {
+          console.error('SubscriptionService: Error loading trial history:', trialError);
+        } else {
+          this.trialHistory = trialData || [];
+        }
+
+        // Initialize abuse prevention (stored in memory for security)
+        this.abusePrevention = {
+          emailTrialCount: {},
+          deviceFingerprints: {},
+          ipAddresses: {},
+          paymentMethods: {},
+          cooldownPeriods: {}
+        };
+
+        console.log('SubscriptionService: User data loaded from Supabase successfully');
+      }
+    } catch (error) {
+      console.error('SubscriptionService: Error loading user data:', error);
+    }
+  }
+
+  // Legacy method for backward compatibility - now just loads public data
+  async loadData() {
+    console.log('SubscriptionService: Loading public data only (user-specific data will be loaded after authentication)');
+    await this.loadPublicData();
   }
 
   async saveData() {
@@ -562,8 +690,27 @@ class SubscriptionService {
         updated_at: new Date().toISOString()
       };
 
-      this.userSubscriptions.push(subscription);
-      await this.saveData();
+      // Save to Supabase if not in mock mode
+      if (!MOCK_MODE && safeSupabase) {
+        const { data, error } = await safeSupabase
+          .from(TABLES.USER_SUBSCRIPTIONS)
+          .insert([subscription])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('SubscriptionService: Error creating subscription in Supabase:', error);
+          return { success: false, error: error.message };
+        }
+
+        // Update local cache
+        this.userSubscriptions.push(data);
+        console.log('SubscriptionService: Subscription created in Supabase:', data.id);
+      } else {
+        // Mock mode - store in memory
+        this.userSubscriptions.push(subscription);
+        console.log('SubscriptionService: Subscription created in mock mode:', subscription.id);
+      }
 
       // Initialize usage tracking
       await this.initializeUsageTracking(userId, subscription.id, periodStart, periodEnd);
@@ -598,13 +745,34 @@ class SubscriptionService {
         return { success: false, error: 'Subscription not found' };
       }
 
-      this.userSubscriptions[subscriptionIndex] = {
+      const updatedSubscription = {
         ...this.userSubscriptions[subscriptionIndex],
         ...updates,
         updated_at: new Date().toISOString()
       };
 
-      await this.saveData();
+      // Update in Supabase if not in mock mode
+      if (!MOCK_MODE && safeSupabase) {
+        const { data, error } = await safeSupabase
+          .from(TABLES.USER_SUBSCRIPTIONS)
+          .update(updates)
+          .eq('id', subscriptionId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('SubscriptionService: Error updating subscription in Supabase:', error);
+          return { success: false, error: error.message };
+        }
+
+        // Update local cache
+        this.userSubscriptions[subscriptionIndex] = data;
+        console.log('SubscriptionService: Subscription updated in Supabase:', data.id);
+      } else {
+        // Mock mode - update in memory
+        this.userSubscriptions[subscriptionIndex] = updatedSubscription;
+        console.log('SubscriptionService: Subscription updated in mock mode:', subscriptionId);
+      }
       return { success: true, subscription: this.userSubscriptions[subscriptionIndex] };
     } catch (error) {
       console.error('SubscriptionService: Error updating subscription:', error);

@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ValidatedForm from '../../components/shared/ValidatedForm';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -45,7 +45,7 @@ export default function RebookingScreen({ navigation, route }: RebookingScreenPr
     serviceNotes: [{ validator: 'maxLength', message: 'Notes must be less than 500 characters' }],
   };
 
-  const handleRebook = async (values) => {
+  const handleRebook = async (values: any) => {
     if (!selectedDate || !selectedTime) {
       Alert.alert('Selection Required', 'Please select both date and time for your service');
       return;
@@ -90,7 +90,7 @@ export default function RebookingScreen({ navigation, route }: RebookingScreenPr
     }
   };
 
-  const formatDate = (date) => {
+  const formatDate = (date: any) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -99,7 +99,7 @@ export default function RebookingScreen({ navigation, route }: RebookingScreenPr
     });
   };
 
-  const isDateAvailable = (date) => {
+  const isDateAvailable = (date: any) => {
     // In a real app, you would check mechanic availability
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -224,7 +224,7 @@ export default function RebookingScreen({ navigation, route }: RebookingScreenPr
             submitButtonText="Rebook Service"
             submitButtonVariant="filled"
           >
-            {({ MaterialTextInput }) => (
+            {({ MaterialTextInput }: any) => (
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Additional Notes

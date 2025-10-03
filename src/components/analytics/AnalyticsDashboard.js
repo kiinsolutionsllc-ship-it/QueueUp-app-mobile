@@ -10,7 +10,7 @@ import {
 import IconFallback from '../shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useJobs } from '../../hooks/useJobsQuery';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { FadeIn, SlideInFromBottom } from '../shared/Animations';
 import { hapticService } from '../../services/HapticService';
 

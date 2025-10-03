@@ -11,7 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import MaterialButton from '../../components/shared/MaterialButton';
 import MaterialTextInput from '../../components/shared/MaterialTextInput';
 import ValidatedForm from '../../components/shared/ValidatedForm';
@@ -54,7 +54,7 @@ export default function TwoFactorAuthScreen({ navigation }: TwoFactorAuthScreenP
     }
   };
 
-  const enable2FA = async (values) => {
+  const enable2FA = async (values: any) => {
     setIsLoading(true);
     try {
       // Simulate API call to enable 2FA
@@ -230,7 +230,7 @@ export default function TwoFactorAuthScreen({ navigation }: TwoFactorAuthScreenP
               submitButtonText="Enable 2FA"
               submitButtonVariant="filled"
             >
-              {({ MaterialTextInput }) => (
+              {({ MaterialTextInput }: any) => (
                 <View style={styles.form}>
                   <View style={[styles.qrContainer, { backgroundColor: theme.background }]}>
                     <Text style={[styles.qrTitle, { color: theme.text }]}>

@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import { MOCK_MODE } from '../config/payment';
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
 
 /**
  * UNIFIED LOCATION SERVICE
@@ -232,7 +233,7 @@ class UnifiedLocationService {
   }
 
   // Save location
-  async saveLocation(locationData) {
+  async saveLocation(locationData, userId = null) {
     try {
       if (!this.isInitialized) {
         await this.initialize();
@@ -241,6 +242,7 @@ class UnifiedLocationService {
       const location = {
         id: `location-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         ...locationData,
+        userId: userId,
         createdAt: new Date().toISOString()
       };
 
@@ -249,8 +251,32 @@ class UnifiedLocationService {
         return { success: true, data: location };
       }
 
-      // Real location saving would go here
-      return { success: true, data: location };
+      // Save to Supabase for persistence
+      if (!safeSupabase) {
+        console.warn('UnifiedLocationService: Supabase not configured, cannot save location');
+        return { success: false, error: 'Supabase not configured' };
+      }
+
+      const locationRecord = {
+        ...locationData,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.SAVED_LOCATIONS)
+        .insert([locationRecord])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('UnifiedLocationService: Error saving location to Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('UnifiedLocationService: Location saved to Supabase:', data);
+      return { success: true, data: data };
     } catch (error) {
       console.error('UnifiedLocationService: Error saving location:', error);
       return { success: false, error: error.message };
@@ -272,8 +298,30 @@ class UnifiedLocationService {
         return { success: true, data: locations };
       }
 
-      // Real location retrieval would go here
-      return { success: true, data: [] };
+      // Get locations from Supabase
+      if (!safeSupabase) {
+        console.warn('UnifiedLocationService: Supabase not configured, cannot get saved locations');
+        return { success: false, error: 'Supabase not configured' };
+      }
+
+      let query = safeSupabase
+        .from(TABLES.SAVED_LOCATIONS)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('UnifiedLocationService: Error getting saved locations from Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('UnifiedLocationService: Retrieved saved locations from Supabase:', data?.length || 0);
+      return { success: true, data: data || [] };
     } catch (error) {
       console.error('UnifiedLocationService: Error getting saved locations:', error);
       return { success: false, error: error.message };
@@ -296,7 +344,23 @@ class UnifiedLocationService {
         return { success: false, error: 'Location not found' };
       }
 
-      // Real location deletion would go here
+      // Delete from Supabase
+      if (!safeSupabase) {
+        console.warn('UnifiedLocationService: Supabase not configured, cannot delete location');
+        return { success: false, error: 'Supabase not configured' };
+      }
+
+      const { error } = await safeSupabase
+        .from(TABLES.SAVED_LOCATIONS)
+        .delete()
+        .eq('id', locationId);
+
+      if (error) {
+        console.error('UnifiedLocationService: Error deleting location from Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('UnifiedLocationService: Location deleted from Supabase:', locationId);
       return { success: true, data: { id: locationId } };
     } catch (error) {
       console.error('UnifiedLocationService: Error deleting location:', error);
@@ -331,6 +395,161 @@ class UnifiedLocationService {
     } catch (error) {
       console.error('UnifiedLocationService: Error getting permission status:', error);
       return 'denied';
+    }
+  }
+
+  // Google Maps/Places API integration methods
+  async searchPlaces(query, location = null, radius = 5000) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // Mock search results for testing
+      if (this.mockMode) {
+        const mockResults = [
+          {
+            place_id: 'mock-place-1',
+            name: `${query} - Auto Repair Shop`,
+            formatted_address: '123 Main St, Test City, TC 12345',
+            geometry: {
+              location: {
+                lat: 40.7128 + (Math.random() - 0.5) * 0.01,
+                lng: -74.0060 + (Math.random() - 0.5) * 0.01
+              }
+            },
+            rating: 4.2 + Math.random() * 0.8,
+            price_level: Math.floor(Math.random() * 4),
+            types: ['car_repair', 'establishment'],
+            opening_hours: {
+              open_now: Math.random() > 0.3
+            }
+          }
+        ];
+        return { success: true, data: mockResults };
+      }
+
+      // Real Google Places API call would go here
+      // This would require Google Places API key and proper implementation
+      console.log('UnifiedLocationService: Google Places API search not implemented yet');
+      return { success: true, data: [] };
+    } catch (error) {
+      console.error('UnifiedLocationService: Error searching places:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getPlaceDetails(placeId) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // Mock place details for testing
+      if (this.mockMode) {
+        const mockDetails = {
+          place_id: placeId,
+          name: 'Mock Auto Repair Shop',
+          formatted_address: '123 Main St, Test City, TC 12345',
+          formatted_phone_number: '+1 (555) 123-4567',
+          website: 'https://example.com',
+          rating: 4.5,
+          user_ratings_total: 127,
+          opening_hours: {
+            open_now: true,
+            weekday_text: [
+              'Monday: 8:00 AM – 6:00 PM',
+              'Tuesday: 8:00 AM – 6:00 PM',
+              'Wednesday: 8:00 AM – 6:00 PM',
+              'Thursday: 8:00 AM – 6:00 PM',
+              'Friday: 8:00 AM – 6:00 PM',
+              'Saturday: 9:00 AM – 4:00 PM',
+              'Sunday: Closed'
+            ]
+          },
+          photos: [
+            { photo_reference: 'mock-photo-1', height: 400, width: 600 }
+          ],
+          reviews: [
+            {
+              author_name: 'John Doe',
+              rating: 5,
+              text: 'Great service and fair prices!',
+              time: Date.now() - 86400000
+            }
+          ]
+        };
+        return { success: true, data: mockDetails };
+      }
+
+      // Real Google Places API call would go here
+      console.log('UnifiedLocationService: Google Places API details not implemented yet');
+      return { success: true, data: null };
+    } catch (error) {
+      console.error('UnifiedLocationService: Error getting place details:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async geocodeAddress(address) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // Mock geocoding for testing
+      if (this.mockMode) {
+        const mockResult = {
+          formatted_address: address,
+          geometry: {
+            location: {
+              lat: 40.7128 + (Math.random() - 0.5) * 0.01,
+              lng: -74.0060 + (Math.random() - 0.5) * 0.01
+            }
+          },
+          place_id: `mock-place-${Date.now()}`,
+          types: ['street_address', 'geocode']
+        };
+        return { success: true, data: mockResult };
+      }
+
+      // Real Google Geocoding API call would go here
+      console.log('UnifiedLocationService: Google Geocoding API not implemented yet');
+      return { success: true, data: null };
+    } catch (error) {
+      console.error('UnifiedLocationService: Error geocoding address:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async reverseGeocode(latitude, longitude) {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+
+      // Mock reverse geocoding for testing
+      if (this.mockMode) {
+        const mockResult = {
+          formatted_address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)} - Mock Address`,
+          geometry: {
+            location: {
+              lat: latitude,
+              lng: longitude
+            }
+          },
+          place_id: `mock-reverse-${Date.now()}`,
+          types: ['street_address', 'geocode']
+        };
+        return { success: true, data: mockResult };
+      }
+
+      // Real Google Reverse Geocoding API call would go here
+      console.log('UnifiedLocationService: Google Reverse Geocoding API not implemented yet');
+      return { success: true, data: null };
+    } catch (error) {
+      console.error('UnifiedLocationService: Error reverse geocoding:', error);
+      return { success: false, error: error.message };
     }
   }
 

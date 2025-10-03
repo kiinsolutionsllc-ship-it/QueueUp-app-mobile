@@ -9,7 +9,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 
@@ -87,7 +87,7 @@ export default function LoginActivityScreen({ navigation }: LoginActivityScreenP
     setRefreshing(false);
   };
 
-  const formatDate = (timestamp) => {
+  const formatDate = (timestamp: any) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
@@ -102,15 +102,15 @@ export default function LoginActivityScreen({ navigation }: LoginActivityScreenP
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     return status === 'success' ? 'check-circle' : 'error';
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     return status === 'success' ? theme.success : theme.error;
   };
 
-  const renderLoginActivity = ({ item }) => (
+  const renderLoginActivity = ({ item }: any) => (
     <MaterialCard style={[styles.activityCard, { backgroundColor: theme.surface }]}>
       <View style={styles.activityHeader}>
         <View style={styles.statusContainer}>

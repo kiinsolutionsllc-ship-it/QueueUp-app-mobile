@@ -128,7 +128,7 @@ export default function PaymentConfirmationScreen({ navigation, route }: Payment
     );
   }
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     switch (status) {
       case 'completed': return theme.success;
       case 'escrow': return theme.warning;
@@ -138,7 +138,7 @@ export default function PaymentConfirmationScreen({ navigation, route }: Payment
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case 'completed': return 'check-circle';
       case 'escrow': return 'schedule';

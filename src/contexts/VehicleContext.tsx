@@ -2,7 +2,7 @@ import * as React from 'react';
 import { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { Alert } from 'react-native';
 import { safeSupabase } from '../config/supabaseConfig';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 // Define TABLES constant locally
 const TABLES = {

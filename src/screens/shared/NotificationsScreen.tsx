@@ -19,7 +19,7 @@ import { ResponsiveContainer } from '../../components/shared/ResponsiveSpacing';
 import IconFallback from '../../components/shared/IconFallback';
 import { hapticService } from '../../services/HapticService';
 
-const NotificationsScreen = ({ navigation }) => {
+const NotificationsScreen = ({ navigation }: any) => {
   const { getCurrentTheme } = useTheme();
   const { 
     notifications, 
@@ -41,13 +41,13 @@ const NotificationsScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleMarkAsRead = async (notification) => {
+  const handleMarkAsRead = async (notification: any) => {
     if (!notification.read) {
       await markAsRead(notification.id);
     }
   };
 
-  const handleNotificationPress = async (notification) => {
+  const handleNotificationPress = async (notification: any) => {
     // Add haptic feedback
     await hapticService.buttonPress();
     
@@ -130,7 +130,7 @@ const NotificationsScreen = ({ navigation }) => {
     }
   };
 
-  const handleDeleteNotification = (notification) => {
+  const handleDeleteNotification = (notification: any) => {
     Alert.alert(
       'Delete Notification',
       'Are you sure you want to delete this notification?',
@@ -175,7 +175,7 @@ const NotificationsScreen = ({ navigation }) => {
     }
   };
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type: any) => {
     const iconMap = {
       'new_job_posted': 'work',
       'new_bid_placed': 'attach_money',
@@ -199,10 +199,10 @@ const NotificationsScreen = ({ navigation }) => {
       'change_order_expired': 'schedule',
       'change_order_payment_received': 'payment',
     };
-    return iconMap[type] || 'notifications';
+    return iconMap[type as keyof typeof iconMap] || 'notifications';
   };
 
-  const getNotificationColor = (priority, read) => {
+  const getNotificationColor = (priority: any, read: any) => {
     if (read) return theme.textSecondary;
     
     switch (priority) {
@@ -213,7 +213,7 @@ const NotificationsScreen = ({ navigation }) => {
     }
   };
 
-  const renderNotification = ({ item: notification }) => (
+  const renderNotification = ({ item: notification }: any) => (
     <TouchableOpacity
       style={[
         styles.notificationItem,

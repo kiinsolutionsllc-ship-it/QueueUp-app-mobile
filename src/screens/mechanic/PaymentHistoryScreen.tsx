@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import { usePayment } from '../../contexts/PaymentContext';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -49,7 +49,7 @@ export default function PaymentHistoryScreen({ navigation }: PaymentHistoryScree
     setRefreshing(false);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: any) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -57,14 +57,14 @@ export default function PaymentHistoryScreen({ navigation }: PaymentHistoryScree
     });
   };
 
-  const formatTime = (dateString) => {
+  const formatTime = (dateString: any) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     switch (status) {
       case 'completed':
         return theme.success;
@@ -81,7 +81,7 @@ export default function PaymentHistoryScreen({ navigation }: PaymentHistoryScree
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case 'completed':
         return 'check-circle';
@@ -106,7 +106,7 @@ export default function PaymentHistoryScreen({ navigation }: PaymentHistoryScree
     { key: 'year', label: 'This Year' },
   ];
 
-  const renderPaymentCard = (payment) => (
+  const renderPaymentCard = (payment: any) => (
     <MaterialCard
       key={payment.id}
       style={[styles.paymentCard, { backgroundColor: theme.cardBackground }]}

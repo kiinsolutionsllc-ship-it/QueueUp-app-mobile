@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import IconFallback from '../../components/shared/IconFallback';
 // JobAssignmentService removed - using UnifiedJobService through SimplifiedJobContext
 import { hapticService } from '../../services/HapticService';
 
-const SchedulingScreenNew = ({ navigation, route }) => {
+const SchedulingScreenNew = ({ navigation, route }: any) => {
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
   const { updateJob, scheduleJob, getJob } = useJob();
@@ -74,7 +74,7 @@ const SchedulingScreenNew = ({ navigation, route }) => {
 
   // Generate available time slots (simplified)
   const generateTimeSlots = () => {
-    const slots = [];
+    const slots: any[] = [];
     const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
     
     times.forEach(time => {

@@ -1,77 +1,187 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { hapticService } from '../../services/HapticService';
+import { safeSupabase, TABLES } from '../../config/supabaseConfig';
 
-// Mock jobs service - DISABLED FOR TESTING
+// Supabase jobs service
 const jobsService = {
   getJobs: async (filters = {}) => {
-    console.log('jobsSlice: Mock jobs service is DISABLED for proper testing');
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Return empty array instead of mock jobs
-    const mockJobs = []; // DISABLED FOR TESTING - No mock jobs
-    
-    // Apply filters
-    let filteredJobs = mockJobs;
-    
-    if (filters.status) {
-      filteredJobs = filteredJobs.filter(job => job.status === filters.status);
+    try {
+      if (!safeSupabase) {
+        console.warn('jobsSlice: Supabase not configured, returning empty array');
+        return [];
+      }
+
+      let query = safeSupabase
+        .from(TABLES.JOBS)
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters.customerId) {
+        query = query.eq('customer_id', filters.customerId);
+      }
+      
+      if (filters.mechanicId) {
+        query = query.eq('mechanic_id', filters.mechanicId);
+      }
+      
+      if (filters.category) {
+        query = query.eq('category', filters.category);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('jobsSlice: Error fetching jobs from Supabase:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('jobsSlice: Error in getJobs:', error);
+      return [];
     }
-    
-    if (filters.customerId) {
-      filteredJobs = filteredJobs.filter(job => job.customer.id === filters.customerId);
-    }
-    
-    if (filters.mechanicId) {
-      filteredJobs = filteredJobs.filter(job => job.mechanic.id === filters.mechanicId);
-    }
-    
-    if (filters.category) {
-      filteredJobs = filteredJobs.filter(job => job.category === filters.category);
-    }
-    
-    return filteredJobs;
   },
   
   createJob: async (jobData) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newJob = {
-      id: `job_${Date.now()}`,
-      ...jobData,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    return newJob;
+    try {
+      if (!safeSupabase) {
+        console.warn('jobsSlice: Supabase not configured, cannot create job');
+        throw new Error('Supabase not configured');
+      }
+
+      const newJob = {
+        ...jobData,
+        status: 'open',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .insert([newJob])
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('jobsSlice: Error creating job in Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('jobsSlice: Error in createJob:', error);
+      throw error;
+    }
   },
   
   updateJob: async (jobId, updates) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      id: jobId,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      if (!safeSupabase) {
+        console.warn('jobsSlice: Supabase not configured, cannot update job');
+        throw new Error('Supabase not configured');
+      }
+
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .update(updateData)
+        .eq('id', jobId)
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('jobsSlice: Error updating job in Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('jobsSlice: Error in updateJob:', error);
+      throw error;
+    }
   },
   
   deleteJob: async (jobId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return jobId;
+    try {
+      if (!safeSupabase) {
+        console.warn('jobsSlice: Supabase not configured, cannot delete job');
+        throw new Error('Supabase not configured');
+      }
+
+      const { error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .delete()
+        .eq('id', jobId);
+
+      if (error) {
+        console.error('jobsSlice: Error deleting job from Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return jobId;
+    } catch (error) {
+      console.error('jobsSlice: Error in deleteJob:', error);
+      throw error;
+    }
   },
   
   bidOnJob: async (jobId, bidData) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      jobId,
-      bid: {
-        id: `bid_${Date.now()}`,
+    try {
+      if (!safeSupabase) {
+        console.warn('jobsSlice: Supabase not configured, cannot create bid');
+        throw new Error('Supabase not configured');
+      }
+
+      const newBid = {
         ...bidData,
-        createdAt: new Date().toISOString(),
-      },
-    };
+        job_id: jobId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await safeSupabase
+        .from(TABLES.BIDS)
+        .insert([newBid])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('jobsSlice: Error creating bid in Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return {
+        jobId,
+        bid: data,
+      };
+    } catch (error) {
+      console.error('jobsSlice: Error in bidOnJob:', error);
+      throw error;
+    }
   },
 };
 

@@ -38,7 +38,7 @@ export default function LanguageSelectionScreen({ navigation }: LanguageSelectio
     { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳' },
   ];
 
-  const handleLanguageSelect = async (languageCode) => {
+  const handleLanguageSelect = async (languageCode: any) => {
     try {
       await changeLanguage(languageCode);
       Alert.alert(
@@ -56,7 +56,7 @@ export default function LanguageSelectionScreen({ navigation }: LanguageSelectio
     }
   };
 
-  const renderLanguageItem = ({ item }) => {
+  const renderLanguageItem = ({ item }: any) => {
     const isSelected = currentLanguage === item.code;
     
     return (

@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, KeyboardAvoidingView, Platform, TextInput, ActivityIndicator } from 'react-native';
 import { StepComponentProps, Vehicle } from '../../types/JobTypes';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useLocation } from '../../contexts/LocationContext';
 import { createJobStyles } from '../../styles/CreateJobScreenStyles';
 import { Ionicons } from '@expo/vector-icons';
 import IconFallback from '../shared/IconFallback';
+import locationService from '../../services/LocationService';
 
 // Enhanced styles with yellow theme integration
 const additionalStyles = StyleSheet.create({
@@ -14,6 +15,7 @@ const additionalStyles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 100, // Extra padding for keyboard and suggestions
   },
   stepContainer: {
     flex: 1,
@@ -112,24 +114,6 @@ const additionalStyles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.7,
     marginTop: 4,
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectionIndicatorSelected: {
-    backgroundColor: '#EAB308',
-  },
-  selectionIndicatorUnselected: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
   },
   emptyState: {
     alignItems: 'center',
@@ -265,60 +249,6 @@ const additionalStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-  textInput: {
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  textInputFocused: {
-    shadowColor: '#EAB308',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  textInputError: {
-    borderColor: '#EF4444',
-    backgroundColor: '#FEF2F2',
-  },
-  errorMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 4,
-  },
-  errorText: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginLeft: 6,
-    flex: 1,
-  },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
-  },
-  locationButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-    color: '#6B7280',
-  },
   requiredStar: {
     fontSize: 16,
     fontWeight: '700',
@@ -381,6 +311,115 @@ const additionalStyles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
   },
+  // Custom location input styles (avoiding FlatList nesting)
+  locationInputContainer: {
+    marginBottom: 16,
+  },
+  locationInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  locationInputIcon: {
+    marginRight: 12,
+  },
+  locationInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 12,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  locationInputFocused: {
+    shadowColor: '#EAB308',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  locationInputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  searchIndicator: {
+    marginLeft: 8,
+  },
+  // Address suggestions using View instead of FlatList
+  suggestionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    maxHeight: 150, // Reduced height to prevent clipping
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 20, // Add margin to prevent clipping
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  suggestionIcon: {
+    marginRight: 12,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  currentLocationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  currentLocationIcon: {
+    marginRight: 8,
+  },
+  currentLocationText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  currentLocationButtonDisabled: {
+    opacity: 0.6,
+  },
+  errorMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 6,
+    flex: 1,
+  },
 });
 
 interface VehicleServiceStepProps extends StepComponentProps {
@@ -406,6 +445,13 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
   const [focusedField, setFocusedField] = React.useState<string | null>(null);
   const [showLocationDropdown, setShowLocationDropdown] = React.useState<boolean>(false);
   
+  // Location input states
+  const [addressSuggestions, setAddressSuggestions] = React.useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = React.useState<boolean>(false);
+  const [isSearching, setIsSearching] = React.useState<boolean>(false);
+  const [isLoadingLocation, setIsLoadingLocation] = React.useState<boolean>(false);
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   // Animation values for enhanced interactions
   const mobileScale = React.useRef(new Animated.Value(1)).current;
@@ -489,10 +535,92 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
     onVehicleSelect?.(vehicleId);
   }, [updateFormData, onVehicleSelect]);
 
-  // Handle location text change
-  const handleLocationTextChange = React.useCallback((value: string) => {
-    updateFormData('location', value);
+  // Handle location text change with address search
+  const handleLocationTextChange = React.useCallback((text: string) => {
+    updateFormData('location', text);
+    
+    if (text.length > 2) {
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      
+      // Set new timeout for search
+      searchTimeoutRef.current = setTimeout(async () => {
+        setIsSearching(true);
+        try {
+          const result = await locationService.searchAddresses(text);
+          if (result.success && result.results.length > 0) {
+            setAddressSuggestions(result.results);
+            setShowSuggestions(true);
+            console.log(`📍 Found ${result.results.length} address suggestions using ${(result as any).fallback ? 'Expo Location' : 'Google Places'}`);
+          } else if ((result as any).fallback) {
+            console.log('Location service unavailable, allowing manual input');
+            setAddressSuggestions([]);
+            setShowSuggestions(false);
+          } else {
+            setAddressSuggestions([]);
+            setShowSuggestions(false);
+          }
+        } catch (error) {
+          console.error('Address search error:', error);
+          setAddressSuggestions([]);
+          setShowSuggestions(false);
+        } finally {
+          setIsSearching(false);
+        }
+      }, 500); // 500ms delay
+    } else {
+      setAddressSuggestions([]);
+      setShowSuggestions(false);
+    }
   }, [updateFormData]);
+
+  // Handle location input focus with scroll
+  const handleLocationFocus = React.useCallback(() => {
+    setFocusedField('location');
+    // Scroll to location section when keyboard opens
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, []);
+
+  // Handle location input blur
+  const handleLocationBlur = React.useCallback(() => {
+    setFocusedField(null);
+    // Delay hiding suggestions to allow for selection
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
+  }, []);
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = React.useCallback((suggestion: any) => {
+    updateFormData('location', suggestion.address);
+    setShowSuggestions(false);
+    setAddressSuggestions([]);
+  }, [updateFormData]);
+
+  // Handle current location
+  const handleUseCurrentLocation = React.useCallback(async () => {
+    if (onLocationSelect) {
+      onLocationSelect();
+    } else {
+      setIsLoadingLocation(true);
+      try {
+        const result = await locationService.getCurrentLocationWithAddress();
+        if (result.success) {
+          updateFormData('location', result.address || '');
+          setShowSuggestions(false);
+          setAddressSuggestions([]);
+        }
+      } catch (error) {
+        console.error('Location error:', error);
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    }
+  }, [onLocationSelect, updateFormData]);
 
   // Handle location selection
   const handleLocationSelect = React.useCallback(() => {
@@ -521,6 +649,15 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
     
     return { isValid: true, message: null };
   }, [formData]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Render service type card
   const renderServiceTypeCard = (
@@ -725,6 +862,134 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
     );
   };
 
+  // Render custom location input (avoiding FlatList nesting)
+  const renderLocationInput = () => {
+    const isFocused = focusedField === 'location';
+    const validationState = getFieldValidationState('location');
+    
+    return (
+      <View style={styles.locationInputContainer}>
+        <View style={[
+          styles.locationInputWrapper,
+          { 
+            borderColor: isFocused ? theme.primary : validationState.isValid ? theme.border : theme.error,
+            backgroundColor: theme.surface || '#FFFFFF'
+          },
+          isFocused && styles.locationInputFocused,
+          !validationState.isValid && styles.locationInputError
+        ]}>
+          <IconFallback
+            name="location-on"
+            size={20}
+            color={isFocused ? theme.primary : theme.textSecondary}
+            style={styles.locationInputIcon}
+          />
+          <TextInput
+            style={[
+              styles.locationInput,
+              { color: theme.text }
+            ]}
+            value={formData.location}
+            onChangeText={handleLocationTextChange}
+            placeholder="Enter your address or location"
+            placeholderTextColor={theme.textSecondary}
+            onFocus={handleLocationFocus}
+            onBlur={handleLocationBlur}
+            accessible={true}
+            accessibilityLabel="Service location"
+            accessibilityHint="Enter your address or location"
+          />
+          
+          {/* Search indicator */}
+          {isSearching && (
+            <ActivityIndicator
+              size="small"
+              color={theme.primary}
+              style={styles.searchIndicator}
+            />
+          )}
+        </View>
+
+        {/* Address Suggestions using View instead of FlatList */}
+        {showSuggestions && addressSuggestions.length > 0 && (
+          <View style={[
+            styles.suggestionsContainer, 
+            { 
+              borderColor: theme.border,
+              backgroundColor: theme.surface || '#FFFFFF'
+            }
+          ]}>
+            {addressSuggestions.slice(0, 3).map((item, index) => ( // Limit to 3 suggestions to prevent clipping
+              <TouchableOpacity
+                key={`suggestion-${index}`}
+                style={[
+                  styles.suggestionItem,
+                  { borderBottomColor: theme.border }
+                ]}
+                onPress={() => handleSuggestionSelect(item)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Select address: ${item.address}`}
+              >
+                <IconFallback
+                  name="location-on"
+                  size={16}
+                  color={theme.textSecondary}
+                  style={styles.suggestionIcon}
+                />
+                <Text style={[styles.suggestionText, { color: theme.text }]}>
+                  {item.address}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Current Location Button */}
+        <TouchableOpacity
+          style={[
+            styles.currentLocationButton,
+            isLoadingLocation && styles.currentLocationButtonDisabled
+          ]}
+          onPress={handleUseCurrentLocation}
+          disabled={isLoadingLocation}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Use current location"
+          accessibilityHint="Gets your current location and fills the address"
+        >
+          {isLoadingLocation ? (
+            <ActivityIndicator
+              size="small"
+              color={theme.primary}
+              style={styles.currentLocationIcon}
+            />
+          ) : (
+            <IconFallback
+              name="my-location"
+              size={16}
+              color={theme.primary}
+              style={styles.currentLocationIcon}
+            />
+          )}
+          <Text style={[styles.currentLocationText, { color: theme.primary }]}>
+            {isLoadingLocation ? 'Getting Location...' : 'Use Current Location'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Error Message */}
+        {validationState.message && (
+          <View style={styles.errorMessageContainer}>
+            <Ionicons name="alert-circle-outline" size={16} color={theme.error} />
+            <Text style={[styles.errorText, { color: theme.error }]}>
+              {validationState.message}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Render empty state for vehicles
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -823,12 +1088,21 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
   };
 
   return (
-    <ScrollView 
-      style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView 
+      style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
     >
-      <View style={styles.stepContainer}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        keyboardDismissMode="interactive"
+      >
+        <View style={styles.stepContainer}>
         
         {/* Hero Section */}
         {renderHeroSection()}
@@ -912,46 +1186,12 @@ const VehicleServiceStep: React.FC<VehicleServiceStepProps> = ({
           {/* Saved Locations Dropdown */}
           {renderLocationDropdown()}
 
-          <TextInput
-            style={[
-              styles.textInput,
-              focusedField === 'location' && styles.textInputFocused,
-              !getFieldValidationState('location').isValid && styles.textInputError,
-              { color: theme.text, borderColor: focusedField === 'location' ? theme.primary : theme.border }
-            ]}
-            value={formData.location}
-            onChangeText={handleLocationTextChange}
-            placeholder="Enter your address or location"
-            placeholderTextColor={theme.textSecondary}
-            onFocus={() => setFocusedField('location')}
-            onBlur={() => setFocusedField(null)}
-          />
-
-          {getFieldValidationState('location').message && (
-            <View style={styles.errorMessageContainer}>
-              <Ionicons name="alert-circle-outline" size={16} color={theme.error} />
-              <Text style={[styles.errorText, { color: theme.error }]}>
-                {getFieldValidationState('location').message}
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.locationButton,
-              { borderColor: theme.border, backgroundColor: theme.surfaceVariant }
-            ]}
-            onPress={handleLocationSelect}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="location" size={18} color={theme.primary} />
-            <Text style={[styles.locationButtonText, { color: theme.primary }]}>
-              Use Current Location
-            </Text>
-          </TouchableOpacity>
+          {/* Custom Location Input with Google Maps Autocomplete */}
+          {renderLocationInput()}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

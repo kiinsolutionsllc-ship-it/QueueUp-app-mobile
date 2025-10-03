@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import IconFallback from '../../components/shared/IconFallback';
 import * as Location from 'expo-location';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 // MockDataService removed - no mock data
@@ -40,7 +40,7 @@ const FilterDropdown = ({
   searchable = false
 }: { title: any, value: any, options: any, onSelect: any, isOpen: any, onToggle: any, theme: any, icon?: any, multiSelect?: any, searchable?: any }) => {
   const [searchText, setSearchText] = useState<any>('');
-  const selectedOption = options.find(opt => opt.id === value) || options[0] || { label: 'Select...', name: 'Select...' };
+  const selectedOption = options.find((opt: any) => opt.id === value) || options[0] || { label: 'Select...', name: 'Select...' };
   
   const filteredOptions = searchable && searchText 
     ? options.filter((option: any) => 
@@ -762,7 +762,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   }, [fadeAnim, slideAnim]);
 
   const isFavorited = (mechanicId: any) => {
-    return favorites.some(fav => fav.mechanicId === mechanicId);
+    return favorites.some((fav: any) => fav.mechanicId === mechanicId);
   };
 
   const handleToggleFavorite = async (mechanic: any) => {

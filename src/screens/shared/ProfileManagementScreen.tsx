@@ -14,7 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ValidatedForm from '../../components/shared/ValidatedForm';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -102,7 +102,7 @@ export default function ProfileManagementScreen({ navigation }: ProfileManagemen
     );
   };
 
-  const handleUpdateProfile = async (values) => {
+  const handleUpdateProfile = async (values: any) => {
     setIsLoading(true);
     try {
       // Simulate API call
@@ -188,7 +188,7 @@ export default function ProfileManagementScreen({ navigation }: ProfileManagemen
             submitButtonText="Update Profile"
             submitButtonVariant="filled"
           >
-            {({ MaterialTextInput, values, errors, touched }) => (
+            {({ MaterialTextInput, values, errors, touched }: any) => (
               <View style={styles.form}>
                 <MaterialTextInput
                   name="name"

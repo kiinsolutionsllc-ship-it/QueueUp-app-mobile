@@ -1,7 +1,7 @@
 // Mechanic Service
-// Provides mechanic data for the app
+// Provides mechanic data for the app using Supabase
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
 
 class MechanicService {
   constructor() {
@@ -14,7 +14,7 @@ class MechanicService {
     if (this.initialized) return;
     
     try {
-      // Load mechanics from storage or use sample data
+      // Load mechanics from Supabase
       await this.loadMechanics();
       this.initialized = true;
     } catch (error) {
@@ -22,35 +22,32 @@ class MechanicService {
     }
   }
 
-  // Load mechanics from storage or sample data
+  // Load mechanics from Supabase
   async loadMechanics() {
     try {
-      // Try to load from AsyncStorage first
-      const storedMechanics = await AsyncStorage.getItem('mechanics');
-      
-      if (storedMechanics) {
-        this.mechanics = JSON.parse(storedMechanics);
-      } else {
-        // Start with empty mechanics array
+      if (!safeSupabase) {
+        console.warn('MechanicService: Supabase not configured, using empty array');
         this.mechanics = [];
-        // Save empty array to storage
-        await AsyncStorage.setItem('mechanics', JSON.stringify(this.mechanics));
+        return;
       }
-      
-      console.log(`MechanicService: Loaded ${this.mechanics.length} mechanics`);
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.MECHANICS)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('MechanicService: Error loading mechanics from Supabase:', error);
+        this.mechanics = [];
+        return;
+      }
+
+      this.mechanics = data || [];
+      console.log(`MechanicService: Loaded ${this.mechanics.length} mechanics from Supabase`);
     } catch (error) {
       console.error('MechanicService: Error loading mechanics:', error);
       // Fallback to empty array
       this.mechanics = [];
-    }
-  }
-
-  // Save mechanics to storage
-  async saveMechanics() {
-    try {
-      await AsyncStorage.setItem('mechanics', JSON.stringify(this.mechanics));
-    } catch (error) {
-      console.error('MechanicService: Error saving mechanics:', error);
     }
   }
 
@@ -112,17 +109,33 @@ class MechanicService {
   // Add a new mechanic
   async addMechanic(mechanicData) {
     try {
+      if (!safeSupabase) {
+        console.warn('MechanicService: Supabase not configured, cannot add mechanic');
+        return { success: false, error: 'Supabase not configured' };
+      }
+
       const newMechanic = {
         ...mechanicData,
-        id: `mechanic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        joinDate: new Date().toISOString(),
-        isAvailable: true,
+        is_available: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
       
-      this.mechanics.push(newMechanic);
-      await this.saveMechanics();
+      const { data, error } = await safeSupabase
+        .from(TABLES.MECHANICS)
+        .insert([newMechanic])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('MechanicService: Error adding mechanic to Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      this.mechanics.unshift(data);
       
-      return { success: true, mechanic: newMechanic };
+      return { success: true, mechanic: data };
     } catch (error) {
       console.error('MechanicService: Error adding mechanic:', error);
       return { success: false, error: error.message };
@@ -132,20 +145,35 @@ class MechanicService {
   // Update mechanic
   async updateMechanic(mechanicId, updates) {
     try {
-      const mechanicIndex = this.mechanics.findIndex(m => m.id === mechanicId);
-      
-      if (mechanicIndex === -1) {
-        return { success: false, error: 'Mechanic not found' };
+      if (!safeSupabase) {
+        console.warn('MechanicService: Supabase not configured, cannot update mechanic');
+        return { success: false, error: 'Supabase not configured' };
       }
-      
-      this.mechanics[mechanicIndex] = {
-        ...this.mechanics[mechanicIndex],
+
+      const updateData = {
         ...updates,
+        updated_at: new Date().toISOString(),
       };
       
-      await this.saveMechanics();
+      const { data, error } = await safeSupabase
+        .from(TABLES.MECHANICS)
+        .update(updateData)
+        .eq('id', mechanicId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('MechanicService: Error updating mechanic in Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      const mechanicIndex = this.mechanics.findIndex(m => m.id === mechanicId);
+      if (mechanicIndex !== -1) {
+        this.mechanics[mechanicIndex] = data;
+      }
       
-      return { success: true, mechanic: this.mechanics[mechanicIndex] };
+      return { success: true, mechanic: data };
     } catch (error) {
       console.error('MechanicService: Error updating mechanic:', error);
       return { success: false, error: error.message };
@@ -155,14 +183,26 @@ class MechanicService {
   // Delete mechanic
   async deleteMechanic(mechanicId) {
     try {
-      const mechanicIndex = this.mechanics.findIndex(m => m.id === mechanicId);
-      
-      if (mechanicIndex === -1) {
-        return { success: false, error: 'Mechanic not found' };
+      if (!safeSupabase) {
+        console.warn('MechanicService: Supabase not configured, cannot delete mechanic');
+        return { success: false, error: 'Supabase not configured' };
       }
-      
-      this.mechanics.splice(mechanicIndex, 1);
-      await this.saveMechanics();
+
+      const { error } = await safeSupabase
+        .from(TABLES.MECHANICS)
+        .delete()
+        .eq('id', mechanicId);
+
+      if (error) {
+        console.error('MechanicService: Error deleting mechanic from Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      const mechanicIndex = this.mechanics.findIndex(m => m.id === mechanicId);
+      if (mechanicIndex !== -1) {
+        this.mechanics.splice(mechanicIndex, 1);
+      }
       
       return { success: true };
     } catch (error) {
@@ -202,9 +242,23 @@ class MechanicService {
   // Clear all mechanics (for testing)
   async clearMechanics() {
     try {
+      if (!safeSupabase) {
+        console.warn('MechanicService: Supabase not configured, cannot clear mechanics');
+        return;
+      }
+
+      const { error } = await safeSupabase
+        .from(TABLES.MECHANICS)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+
+      if (error) {
+        console.error('MechanicService: Error clearing mechanics from Supabase:', error);
+        return;
+      }
+
       this.mechanics = [];
-      await AsyncStorage.removeItem('mechanics');
-      console.log('MechanicService: All mechanics cleared');
+      console.log('MechanicService: All mechanics cleared from Supabase');
     } catch (error) {
       console.error('MechanicService: Error clearing mechanics:', error);
     }
@@ -213,8 +267,7 @@ class MechanicService {
   // Reset to empty data
   async resetToSampleData() {
     try {
-      this.mechanics = [];
-      await this.saveMechanics();
+      await this.clearMechanics();
       console.log('MechanicService: Reset to empty data');
     } catch (error) {
       console.error('MechanicService: Error resetting to empty data:', error);

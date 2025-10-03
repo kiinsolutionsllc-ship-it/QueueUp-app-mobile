@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 // AsyncStorage removed - using Supabase only
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 // Consolidated settings interface
 export interface AppSettings {

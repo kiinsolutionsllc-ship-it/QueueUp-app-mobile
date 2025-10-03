@@ -1,10 +1,19 @@
 // Push Notification Service
 // Handles push notifications for immediate awareness of important events
+// Uses Firebase for Play Store builds, Expo for development
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 // AsyncStorage removed - using Supabase only
+
+// Try to import Firebase messaging (only available in production builds)
+let firebaseMessaging = null;
+try {
+  firebaseMessaging = require('@react-native-firebase/messaging').default;
+} catch (error) {
+  console.log('PushNotificationService: Firebase messaging not available (development mode)');
+}
 
 
 // Detect Expo Go environment
@@ -43,15 +52,82 @@ class PushNotificationService {
   async initialize() {
     if (this.isInitialized) return;
     
-    // Skip remote push setup in Expo Go (SDK 53+ removed remote push support in Expo Go)
-    if (IS_EXPO_GO) {
+    // Use Firebase if available (production builds)
+    if (firebaseMessaging) {
+      console.log('PushNotificationService: Using Firebase messaging for notifications');
+      await this.initializeFirebase();
+    } else if (IS_EXPO_GO) {
       console.log('PushNotificationService: Skipping remote push setup in Expo Go');
-      this.isInitialized = true;
-      return;
+    } else {
+      console.log('PushNotificationService: Using Expo notifications for development');
+      await this.initializeExpo();
     }
-
-    // Remote push setup can be added here for dev builds/production apps if needed
+    
     this.isInitialized = true;
+  }
+
+  // Initialize Firebase messaging
+  async initializeFirebase() {
+    try {
+      const authStatus = await firebaseMessaging().requestPermission();
+      const enabled = authStatus === firebaseMessaging.AuthorizationStatus.AUTHORIZED ||
+                     authStatus === firebaseMessaging.AuthorizationStatus.PROVISIONAL;
+
+      if (enabled) {
+        console.log('PushNotificationService: Firebase notification permission granted');
+        
+        // Get FCM token
+        const token = await firebaseMessaging().getToken();
+        this.expoPushToken = token;
+        console.log('PushNotificationService: FCM token:', token);
+        
+        // Set up message listener
+        this.setupFirebaseMessageListener();
+      } else {
+        console.log('PushNotificationService: Firebase notification permission denied');
+      }
+    } catch (error) {
+      console.error('PushNotificationService: Error initializing Firebase:', error);
+    }
+  }
+
+  // Initialize Expo notifications (development)
+  async initializeExpo() {
+    try {
+      // Remote push setup can be added here for dev builds/production apps if needed
+      console.log('PushNotificationService: Expo notifications initialized for development');
+    } catch (error) {
+      console.error('PushNotificationService: Error initializing Expo notifications:', error);
+    }
+  }
+
+  // Set up Firebase message listener
+  setupFirebaseMessageListener() {
+    if (!firebaseMessaging) return;
+
+    // Handle background messages
+    firebaseMessaging().setBackgroundMessageHandler(async (remoteMessage) => {
+      console.log('PushNotificationService: Background message received:', remoteMessage);
+    });
+
+    // Handle foreground messages
+    const unsubscribe = firebaseMessaging().onMessage(async (remoteMessage) => {
+      console.log('PushNotificationService: Foreground message received:', remoteMessage);
+      
+      // Show local notification for foreground messages
+      if (remoteMessage.notification) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification.title,
+            body: remoteMessage.notification.body,
+            data: remoteMessage.data,
+          },
+          trigger: null,
+        });
+      }
+    });
+
+    return unsubscribe;
   }
 
   // Register for push notifications

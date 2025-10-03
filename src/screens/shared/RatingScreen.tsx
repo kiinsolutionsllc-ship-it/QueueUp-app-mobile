@@ -12,7 +12,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { Rating } from 'react-native-ratings';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ValidatedForm from '../../components/shared/ValidatedForm';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -47,14 +47,14 @@ export default function RatingScreen({ navigation, route }: RatingScreenProps) {
     review: [{ validator: 'minLength', message: 'Review must be at least 10 characters' }],
   };
 
-  const handleCategoryRating = (category, value) => {
-    setSelectedCategories(prev => ({
+  const handleCategoryRating = (category: any, value: any) => {
+    setSelectedCategories((prev: any) => ({
       ...prev,
       [category]: value,
     }));
   };
 
-  const handleSubmitRating = async (values) => {
+  const handleSubmitRating = async (values: any) => {
     if (rating === 0) {
       Alert.alert('Rating Required', 'Please provide an overall rating');
       return;
@@ -99,7 +99,7 @@ export default function RatingScreen({ navigation, route }: RatingScreenProps) {
     }
   };
 
-  const renderCategoryRating = (category) => (
+  const renderCategoryRating = (category: any) => (
     <View key={category.key} style={styles.categoryContainer}>
       <View style={styles.categoryHeader}>
         <IconFallback name={category.icon} size={20} color={theme.primary} />
@@ -112,7 +112,7 @@ export default function RatingScreen({ navigation, route }: RatingScreenProps) {
         ratingCount={5}
         imageSize={24}
         startingValue={selectedCategories[category.key] || 0}
-        onFinishRating={(rating) => handleCategoryRating(category.key, rating)}
+        onFinishRating={(rating: any) => handleCategoryRating(category.key, rating)}
         style={styles.rating}
         tintColor={theme.background}
       />
@@ -194,7 +194,7 @@ export default function RatingScreen({ navigation, route }: RatingScreenProps) {
             submitButtonText="Submit Rating"
             submitButtonVariant="filled"
           >
-            {({ MaterialTextInput }) => (
+            {({ MaterialTextInput }: any) => (
               <View style={styles.reviewSection}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Write a Review

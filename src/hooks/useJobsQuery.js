@@ -1,179 +1,186 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hapticService } from '../services/HapticService';
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
 
-// Mock API service - replace with actual API calls
+// Supabase API service
 const jobsApi = {
   getJobs: async (filters = {}) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const mockJobs = [
-      {
-        id: '1',
-        title: 'Oil Change Service',
-        description: 'Regular oil change and filter replacement',
-        customer: {
-          id: 'customer1',
-          name: 'John Smith',
-          email: 'john@example.com',
-          phone: '+1234567890',
-        },
-        mechanic: {
-          id: 'mechanic1',
-          name: 'Mike Mechanic',
-          rating: 4.9,
-        },
-        status: 'open',
-        price: 75,
-        estimatedDuration: 30,
-        location: {
-          address: '123 Main St, City, State',
-          coordinates: { lat: 40.7128, lng: -74.0060 },
-        },
-        createdAt: '2024-12-01T10:00:00Z',
-        updatedAt: '2024-12-01T10:00:00Z',
-        scheduledAt: null,
-        completedAt: null,
-        category: 'maintenance',
-        vehicle: {
-          make: 'Unknown',
-          model: 'Vehicle',
-          year: 2020,
-          vin: 'UNKNOWN',
-        },
-      },
-      {
-        id: '2',
-        title: 'Brake Pad Replacement',
-        description: 'Replace front and rear brake pads',
-        customer: {
-          id: 'customer2',
-          name: 'Sarah Johnson',
-          email: 'sarah@example.com',
-          phone: '+1234567891',
-        },
-        mechanic: {
-          id: 'mechanic2',
-          name: 'Sarah Technician',
-          rating: 4.8,
-        },
-        status: 'in_progress',
-        price: 200,
-        estimatedDuration: 90,
-        location: {
-          address: '456 Oak Ave, City, State',
-          coordinates: { lat: 40.7589, lng: -73.9851 },
-        },
-        createdAt: '2024-11-28T14:30:00Z',
-        updatedAt: '2024-12-01T09:15:00Z',
-        scheduledAt: '2024-12-01T09:00:00Z',
-        completedAt: null,
-        category: 'brakes',
-        vehicle: {
-          make: 'Unknown',
-          model: 'Vehicle',
-          year: 2019,
-          vin: 'UNKNOWN',
-        },
-      },
-      {
-        id: '3',
-        title: 'Tire Rotation',
-        description: 'Rotate tires and check alignment',
-        customer: {
-          id: 'customer3',
-          name: 'Mike Davis',
-          email: 'mike@example.com',
-          phone: '+1234567892',
-        },
-        mechanic: {
-          id: 'mechanic1',
-          name: 'Mike Mechanic',
-          rating: 4.9,
-        },
-        status: 'completed',
-        price: 50,
-        estimatedDuration: 45,
-        location: {
-          address: '789 Pine St, City, State',
-          coordinates: { lat: 40.7505, lng: -73.9934 },
-        },
-        createdAt: '2024-11-25T11:00:00Z',
-        updatedAt: '2024-11-25T15:30:00Z',
-        scheduledAt: '2024-11-25T14:00:00Z',
-        completedAt: '2024-11-25T15:30:00Z',
-        category: 'tires',
-        vehicle: {
-          make: 'Nissan',
-          model: 'Altima',
-          year: 2021,
-          vin: '1N4AL3AP8JC123789',
-        },
-      },
-    ];
-    
-    // Apply filters
-    let filteredJobs = mockJobs;
-    
-    if (filters.status) {
-      filteredJobs = filteredJobs.filter(job => job.status === filters.status);
+    try {
+      if (!safeSupabase) {
+        console.warn('useJobsQuery: Supabase not configured, returning empty array');
+        return [];
+      }
+
+      let query = safeSupabase
+        .from(TABLES.JOBS)
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      
+      if (filters.customerId) {
+        query = query.eq('customer_id', filters.customerId);
+      }
+      
+      if (filters.mechanicId) {
+        query = query.eq('mechanic_id', filters.mechanicId);
+      }
+      
+      if (filters.category) {
+        query = query.eq('category', filters.category);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('useJobsQuery: Error fetching jobs from Supabase:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('useJobsQuery: Error in getJobs:', error);
+      return [];
     }
-    
-    if (filters.customerId) {
-      filteredJobs = filteredJobs.filter(job => job.customer.id === filters.customerId);
-    }
-    
-    if (filters.mechanicId) {
-      filteredJobs = filteredJobs.filter(job => job.mechanic.id === filters.mechanicId);
-    }
-    
-    if (filters.category) {
-      filteredJobs = filteredJobs.filter(job => job.category === filters.category);
-    }
-    
-    return filteredJobs;
   },
   
   createJob: async (jobData) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newJob = {
-      id: `job_${Date.now()}`,
-      ...jobData,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    return newJob;
+    try {
+      if (!safeSupabase) {
+        console.warn('useJobsQuery: Supabase not configured, cannot create job');
+        throw new Error('Supabase not configured');
+      }
+
+      const newJob = {
+        ...jobData,
+        status: 'open',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .insert([newJob])
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('useJobsQuery: Error creating job in Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('useJobsQuery: Error in createJob:', error);
+      throw error;
+    }
   },
   
   updateJob: async ({ jobId, updates }) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      id: jobId,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    try {
+      if (!safeSupabase) {
+        console.warn('useJobsQuery: Supabase not configured, cannot update job');
+        throw new Error('Supabase not configured');
+      }
+
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .update(updateData)
+        .eq('id', jobId)
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('useJobsQuery: Error updating job in Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('useJobsQuery: Error in updateJob:', error);
+      throw error;
+    }
   },
   
   deleteJob: async (jobId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return jobId;
+    try {
+      if (!safeSupabase) {
+        console.warn('useJobsQuery: Supabase not configured, cannot delete job');
+        throw new Error('Supabase not configured');
+      }
+
+      const { error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .delete()
+        .eq('id', jobId);
+
+      if (error) {
+        console.error('useJobsQuery: Error deleting job from Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      return jobId;
+    } catch (error) {
+      console.error('useJobsQuery: Error in deleteJob:', error);
+      throw error;
+    }
   },
   
   getJob: async (jobId) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Mock single job fetch
-    const jobs = await jobsApi.getJobs();
-    const job = jobs.find(j => j.id === jobId);
-    
-    if (!job) {
-      throw new Error('Job not found');
+    try {
+      if (!safeSupabase) {
+        console.warn('useJobsQuery: Supabase not configured, cannot fetch job');
+        throw new Error('Supabase not configured');
+      }
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.JOBS)
+        .select(`
+          *,
+          customer:customers(*),
+          mechanic:mechanics(*),
+          bids(*)
+        `)
+        .eq('id', jobId)
+        .single();
+
+      if (error) {
+        console.error('useJobsQuery: Error fetching job from Supabase:', error);
+        throw new Error(error.message);
+      }
+
+      if (!data) {
+        throw new Error('Job not found');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('useJobsQuery: Error in getJob:', error);
+      throw error;
     }
-    
-    return job;
   },
 };
 

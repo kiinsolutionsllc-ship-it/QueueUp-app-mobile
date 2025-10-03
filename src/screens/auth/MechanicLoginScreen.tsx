@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, StatusBar, SafeAreaView, Animated, Image,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SecureStorageService } from '../../services/SecureStorageService';
 
@@ -142,7 +142,7 @@ export default function MechanicLoginScreen({ navigation }: MechanicLoginScreenP
           errorMessage = 'Authentication service is not properly configured. Please contact support.';
         } else if (result.error?.includes('confirm your email')) {
           errorTitle = 'Email Not Confirmed';
-          errorMessage = 'Please check your email and click the confirmation link before signing in.';
+          errorMessage = 'Please check your email and enter the verification code before signing in.';
         } else if (result.error?.includes('Too many')) {
           errorTitle = 'Too Many Attempts';
           errorMessage = 'Please wait a few minutes before trying again.';

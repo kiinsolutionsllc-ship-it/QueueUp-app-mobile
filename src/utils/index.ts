@@ -30,7 +30,16 @@ export {
 } from './UnifiedJobFormattingUtils';
 
 // Performance utilities
-export * from './memoization';
+export {
+  useDeepCallback,
+  useDeepMemo,
+  useDebouncedCallback,
+  useThrottledCallback,
+  useExpensiveCalculation,
+  useMemoizedSelector,
+  useMemoizationStats,
+  deepEqual as deepEqualMemo
+} from './memoization';
 
 // Re-export JavaScript utilities with type assertions
 export * from './PerformanceOptimizer';

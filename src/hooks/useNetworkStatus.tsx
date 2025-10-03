@@ -153,7 +153,7 @@ export const useNetworkStatus = ({
     isOnline,
     isConnected,
     connectionType,
-    isInternetReachable,
+    isInternetReachable: isInternetReachable || false,
     isGoodConnection: isGoodConnection() || false,
     isSlowConnection: isSlowConnection(),
     getConnectionQuality,

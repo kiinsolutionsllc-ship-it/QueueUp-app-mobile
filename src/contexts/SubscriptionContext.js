@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 import SubscriptionService from '../services/SubscriptionService';
 
 /**

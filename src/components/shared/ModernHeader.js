@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import IconFallback from './IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { hapticService } from '../../services/HapticService';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
 

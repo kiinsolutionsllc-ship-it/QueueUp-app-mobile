@@ -1,4 +1,5 @@
-import { supabase } from '../config/supabase';
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { isFeatureEnabled } from '../config/featureFlags';
 
 export interface SupportTicket {
   id: string;
@@ -63,6 +64,12 @@ class SupportService {
   // Ticket Management
   async createSupportTicket(ticketData: Omit<SupportTicket, 'id' | 'createdAt' | 'updatedAt' | 'messages'>): Promise<SupportTicket> {
     try {
+      if (!isFeatureEnabled('SUPPORT_TICKETS_ENABLED')) {
+        throw new Error('Support tickets feature is disabled');
+      }
+      
+      // Always use local storage for now to avoid database errors
+      console.warn('SupportService: Using local storage (Supabase disabled)');
       const ticket: SupportTicket = {
         ...ticketData,
         id: this.generateId(),
@@ -70,17 +77,7 @@ class SupportService {
         updatedAt: new Date(),
         messages: [],
       };
-
-      // In a real implementation, save to database
-      // const { data, error } = await supabase
-      //   .from('support_tickets')
-      //   .insert([ticket])
-      //   .select()
-      //   .single();
-
-      // For now, store in local storage or memory
       this.saveTicketToStorage(ticket);
-      
       return ticket;
     } catch (error) {
       console.error('Error creating support ticket:', error);
@@ -90,14 +87,13 @@ class SupportService {
 
   async getSupportTickets(userId: string): Promise<SupportTicket[]> {
     try {
-      // In a real implementation, fetch from database
-      // const { data, error } = await supabase
-      //   .from('support_tickets')
-      //   .select('*')
-      //   .eq('user_id', userId)
-      //   .order('created_at', { ascending: false });
-
-      // For now, get from local storage
+      if (!isFeatureEnabled('SUPPORT_TICKETS_ENABLED')) {
+        console.warn('SupportService: Support tickets feature is disabled');
+        return [];
+      }
+      
+      // Always use local storage for now to avoid database errors
+      console.warn('SupportService: Using local storage (Supabase disabled)');
       return this.getTicketsFromStorage(userId);
     } catch (error) {
       console.error('Error fetching support tickets:', error);
@@ -435,8 +431,11 @@ class SupportService {
       const updatedTickets = existingTickets.filter(t => t.id !== ticket.id);
       updatedTickets.unshift(ticket);
       
-      // In a real app, you might use AsyncStorage or similar
-      // localStorage.setItem(`support_tickets_${ticket.userId}`, JSON.stringify(updatedTickets));
+      // Store in memory for this session
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(`support_tickets_${ticket.userId}`, JSON.stringify(updatedTickets));
+      }
+      console.log('SupportService: Ticket saved to local storage');
     } catch (error) {
       console.error('Error saving ticket to storage:', error);
     }
@@ -444,16 +443,18 @@ class SupportService {
 
   private getTicketsFromStorage(userId: string): SupportTicket[] {
     try {
-      // const stored = localStorage.getItem(`support_tickets_${userId}`);
-      // if (!stored) return [];
-      
-      // const tickets = JSON.parse(stored);
-      // return tickets.map((ticket: any) => ({
-      //   ...ticket,
-      //   createdAt: new Date(ticket.createdAt),
-      //   updatedAt: new Date(ticket.updatedAt),
-      // }));
-      console.log('SupportService: Mock storage - returning empty array');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem(`support_tickets_${userId}`);
+        if (!stored) return [];
+        
+        const tickets = JSON.parse(stored);
+        return tickets.map((ticket: any) => ({
+          ...ticket,
+          createdAt: new Date(ticket.createdAt),
+          updatedAt: new Date(ticket.updatedAt),
+        }));
+      }
+      console.log('SupportService: No localStorage available - returning empty array');
       return [];
     } catch (error) {
       console.error('Error getting tickets from storage:', error);
@@ -463,27 +464,26 @@ class SupportService {
 
   private getTicketFromStorage(ticketId: string): SupportTicket | null {
     try {
-      // This is a simplified approach - in reality you'd need to search across all users
-      // or maintain a separate index
-      // const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
-      
-      // for (const key of keys) {
-      //   const tickets = JSON.parse(localStorage.getItem(key) || '[]');
-      //   const ticket = tickets.find((t: any) => t.id === ticketId);
-      //   if (ticket) {
-      //     return {
-      //       ...ticket,
-      //       createdAt: new Date(ticket.createdAt),
-      //       updatedAt: new Date(ticket.updatedAt),
-      //       messages: ticket.messages.map((msg: any) => ({
-      //         ...msg,
-      //         timestamp: new Date(msg.timestamp),
-      //       })),
-      //     };
-      //   }
-      // }
-      
-      console.log('SupportService: Mock storage - returning null');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
+        
+        for (const key of keys) {
+          const tickets = JSON.parse(localStorage.getItem(key) || '[]');
+          const ticket = tickets.find((t: any) => t.id === ticketId);
+          if (ticket) {
+            return {
+              ...ticket,
+              createdAt: new Date(ticket.createdAt),
+              updatedAt: new Date(ticket.updatedAt),
+              messages: ticket.messages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp),
+              })),
+            };
+          }
+        }
+      }
+      console.log('SupportService: Ticket not found in storage');
       return null;
     } catch (error) {
       console.error('Error getting ticket from storage:', error);
@@ -493,24 +493,27 @@ class SupportService {
 
   private async getAllTickets(): Promise<SupportTicket[]> {
     try {
-      // const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
-      const allTickets: SupportTicket[] = [];
-      
-      // for (const key of keys) {
-      //   const tickets = JSON.parse(localStorage.getItem(key) || '[]');
-      //   allTickets.push(...tickets.map((ticket: any) => ({
-      //     ...ticket,
-      //     createdAt: new Date(ticket.createdAt),
-      //     updatedAt: new Date(ticket.updatedAt),
-      //     messages: ticket.messages.map((msg: any) => ({
-      //       ...msg,
-      //       timestamp: new Date(msg.timestamp),
-      //     })),
-      //   })));
-      // }
-      
-      console.log('SupportService: Mock storage - returning empty array');
-      return allTickets;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
+        const allTickets: SupportTicket[] = [];
+        
+        for (const key of keys) {
+          const tickets = JSON.parse(localStorage.getItem(key) || '[]');
+          allTickets.push(...tickets.map((ticket: any) => ({
+            ...ticket,
+            createdAt: new Date(ticket.createdAt),
+            updatedAt: new Date(ticket.updatedAt),
+            messages: ticket.messages.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            })),
+          })));
+        }
+        
+        return allTickets;
+      }
+      console.log('SupportService: No localStorage available - returning empty array');
+      return [];
     } catch (error) {
       console.error('Error getting all tickets:', error);
       return [];

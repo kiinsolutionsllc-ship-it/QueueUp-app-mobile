@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 
 interface EmailConfirmationCheckerProps {
   email: string;
@@ -35,7 +35,7 @@ export default function EmailConfirmationChecker({
       } else {
         Alert.alert(
           'Email Not Confirmed', 
-          'Please check your email and click the confirmation link to verify your account.'
+          'Please check your email and enter the verification code to verify your account.'
         );
       }
     } catch (error) {
@@ -53,13 +53,13 @@ export default function EmailConfirmationChecker({
       const result = await resendConfirmationEmail(email);
       
       if (result.success) {
-        Alert.alert('Success', 'Confirmation email sent! Please check your inbox.');
+        Alert.alert('Success', 'Verification code sent! Please check your inbox.');
         onResendSuccess?.();
       } else {
-        Alert.alert('Error', result.error || 'Failed to resend confirmation email');
+        Alert.alert('Error', result.error || 'Failed to resend verification code');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend confirmation email');
+      Alert.alert('Error', 'Failed to resend verification code');
     } finally {
       setIsResending(false);
     }
@@ -74,7 +74,7 @@ export default function EmailConfirmationChecker({
       <View style={styles.content}>
         <Text style={styles.title}>Email Verification Required</Text>
         <Text style={styles.message}>
-          Please verify your email address to continue. Check your inbox for a confirmation link.
+          Please verify your email address to continue. Check your inbox for a verification code.
         </Text>
         
         <View style={styles.buttons}>

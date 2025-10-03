@@ -14,7 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '../../hooks/useResponsive';
 import { Heading3, Heading4 } from '../../components/shared/ResponsiveText';
@@ -111,7 +111,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const handleServicePress = (service) => {
+  const handleServicePress = (service: any) => {
     Alert.alert(
       service.service,
       `${service.description}\n\nMechanic: ${service.mechanic}\nCost: $${service.cost}\nDate: ${new Date(service.date).toLocaleDateString()}`,
@@ -123,7 +123,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     );
   };
 
-  const handleRateService = (service) => {
+  const handleRateService = (service: any) => {
     Alert.alert(
       'Rate Service',
       `How would you rate ${service.service} by ${service.mechanic}?`,
@@ -138,7 +138,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     );
   };
 
-  const handleBookAgain = (service) => {
+  const handleBookAgain = (service: any) => {
     navigation.navigate('CreateJob', {
       serviceType: service.type,
       description: `Repeat: ${service.service}`,
@@ -146,7 +146,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     });
   };
 
-  const getServiceIcon = (type) => {
+  const getServiceIcon = (type: any) => {
     switch (type) {
       case 'maintenance': return 'build';
       case 'diagnostic': return 'search';
@@ -156,7 +156,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     }
   };
 
-  const getServiceColor = (type) => {
+  const getServiceColor = (type: any) => {
     switch (type) {
       case 'maintenance': return theme.info;
       case 'diagnostic': return theme.warning;
@@ -166,7 +166,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     switch (status) {
       case 'completed': return theme.success;
       case 'in-progress': return theme.warning;
@@ -175,7 +175,7 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: any) => {
     switch (status) {
       case 'completed': return 'check-circle';
       case 'in-progress': return 'schedule';
@@ -186,14 +186,14 @@ export default function ServiceHistoryScreen({ navigation }: ServiceHistoryScree
 
   const filteredServices = selectedFilter === 'all' 
     ? serviceHistory 
-    : serviceHistory.filter(service => service.type === selectedFilter);
+    : serviceHistory.filter((service: any) => service.type === selectedFilter);
 
-  const totalSpent = serviceHistory.reduce((sum, service) => sum + (service.cost || 0), 0);
+  const totalSpent = serviceHistory.reduce((sum: any, service: any) => sum + (service.cost || 0), 0);
   const averageRating = serviceHistory.length > 0 
-    ? serviceHistory.reduce((sum, service) => sum + (service.rating || 0), 0) / serviceHistory.length 
+    ? serviceHistory.reduce((sum: any, service: any) => sum + (service.rating || 0), 0) / serviceHistory.length 
     : 0;
 
-  const renderServiceCard = (service) => (
+  const renderServiceCard = (service: any) => (
     <TouchableOpacity
       key={service.id}
       style={[styles.serviceCard, { backgroundColor: theme.cardBackground }]}

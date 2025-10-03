@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import IconFallback from '../../components/shared/IconFallback';
 import MaterialButton from '../../components/shared/MaterialButton';
 import PushNotificationService from '../../services/PushNotificationService';
@@ -58,7 +58,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     }
   };
 
-  const savePushPreferences = async (newPreferences) => {
+  const savePushPreferences = async (newPreferences: any) => {
     try {
       const result = await PushNotificationService.saveNotificationPreferences(newPreferences);
       if (result.success) {
@@ -72,7 +72,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     }
   };
 
-  const saveEmailSmsPreferences = async (newPreferences) => {
+  const saveEmailSmsPreferences = async (newPreferences: any) => {
     try {
       const result = await EmailSmsNotificationService.savePreferences(newPreferences);
       if (result.success) {
@@ -86,7 +86,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     }
   };
 
-  const saveCalendarPreferences = async (newPreferences) => {
+  const saveCalendarPreferences = async (newPreferences: any) => {
     // Calendar integration removed
   };
 
@@ -154,7 +154,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     }
   };
 
-  const renderPreferenceSection = (title, icon, children) => (
+  const renderPreferenceSection = (title: string, icon: string, children: React.ReactNode) => (
     <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.divider }]}>
       <View style={styles.sectionHeader}>
         <IconFallback name={icon} size={24} color={theme.primary} />
@@ -164,7 +164,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     </View>
   );
 
-  const renderToggle = (label, value, onValueChange, description = null) => (
+  const renderToggle = (label: string, value: boolean, onValueChange: (value: boolean) => void, description: string | null = null) => (
     <View style={styles.toggleContainer}>
       <View style={styles.toggleContent}>
         <Text style={[styles.toggleLabel, { color: theme.text }]}>{label}</Text>
@@ -183,7 +183,7 @@ export default function NotificationSettingsScreen({ navigation }: NotificationS
     </View>
   );
 
-  const renderTestButton = (label, onPress, icon = 'send') => (
+  const renderTestButton = (label: string, onPress: () => void, icon: string = 'send') => (
     <TouchableOpacity
       style={[styles.testButton, { borderColor: theme.primary }]}
       onPress={onPress}

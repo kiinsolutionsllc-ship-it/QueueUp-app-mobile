@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import { formatJobCost } from '../../utils/JobCostUtils';
@@ -364,20 +364,16 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
               <View style={styles.section}>
                 <MaterialTextInput
                   label={
-                    user?.mechanic_type === 'shop' && formData.bidType === 'hourly' 
-                      ? 'Hourly Rate ($)' 
+                    user?.mechanic_type === 'shop' && formData.bidType === 'hourly'
+                      ? 'Hourly Rate ($)'
                       : 'Total Price ($)'
                   }
                   value={formData.price}
                   onChangeText={(value: string) => updateFormData('price', value)}
                   keyboardType="numeric"
                   rightIcon="attach-money"
-                  placeholder={
-                    user?.mechanic_type === 'shop' && formData.bidType === 'hourly' 
-                      ? '75' 
-                      : '150'
-                  }
-                  error={errors.price}
+                  placeholder={(user?.mechanic_type === 'shop' && formData.bidType === 'hourly') ? '75' : '150'}
+                  error={errors.price || ''}
                 />
               </View>
 
@@ -391,7 +387,7 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
                     keyboardType="numeric"
                     rightIcon="schedule"
                     placeholder="60"
-                    error={errors.estimatedDuration}
+                    error={errors.estimatedDuration || ''}
                   />
                 </View>
               )}
@@ -431,7 +427,7 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
                   numberOfLines={4}
                   rightIcon="message"
                   placeholder="I can help you with this service. I have experience with..."
-                  error={errors.message}
+                  error={errors.message || ''}
                 />
               </View>
             </ScrollView>
@@ -448,7 +444,7 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
             <MaterialButton
               title={isSubmitting ? "Submitting..." : "Submit Bid"}
               onPress={handleSubmitBid}
-              style={[styles.submitButton, { opacity: isSubmitting ? 0.7 : 1 }]}
+              style={[styles.submitButton, { opacity: isSubmitting ? 0.7 : 1 }] as any}
               icon={isSubmitting ? "hourglass-empty" : "send"}
               disabled={isSubmitting}
             />

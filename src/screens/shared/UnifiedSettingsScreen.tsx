@@ -14,7 +14,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useEarningsDisplay } from '../../contexts/EarningsDisplayContext';
 import ModernHeader from '../../components/shared/ModernHeader';

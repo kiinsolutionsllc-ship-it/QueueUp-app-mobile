@@ -20,37 +20,8 @@ export default {
     assetBundlePatterns: [
       '**/*'
     ],
-    // Development build configuration
-    plugins: [
-      'expo-dev-client',
-      'expo-font',
-      [
-        'expo-notifications',
-        {
-          icon: './assets/notification-icon.png',
-          color: '#ffffff',
-          defaultChannel: 'default'
-        }
-      ],
-      [
-        'expo-location',
-        {
-          locationAlwaysAndWhenInUsePermission: 'This app needs access to location to find nearby mechanics and provide location-based services.'
-        }
-      ],
-      [
-        'expo-image-picker',
-        {
-          photosPermission: 'The app accesses your photos to let you share them with mechanics.'
-        }
-      ],
-      [
-        'expo-camera',
-        {
-          cameraPermission: 'The app accesses your camera to let you take photos of your vehicle issues.'
-        }
-      ]
-    ],
+    // Production build configuration - plugins managed in native code
+    // Note: When using native folders, plugins are configured in android/ and ios/ folders
     web: {
       favicon: './assets/Logo.jpg',
       bundler: 'metro',

@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useUnifiedMessaging } from '../../contexts/UnifiedMessagingContext';
@@ -66,7 +66,7 @@ const SuggestScheduleModal = ({ visible, onClose, job, onSubmit, theme }: any) =
 
   // Generate available time slots (more flexible hours)
   const generateTimeSlots = () => {
-    const slots = [];
+    const slots: any[] = [];
     const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
     
     times.forEach(time => {
@@ -818,7 +818,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
                       <MaterialButton
                         title="Accept"
                         onPress={() => handleAcceptSchedule(job)}
-                        variant="contained"
+                        variant="filled"
                         size="small"
                         style={[styles.scheduleButton, styles.smallButton, { backgroundColor: theme.success }]}
                       />
@@ -868,7 +868,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
                     <MaterialButton
                       title="Start Job"
                       onPress={() => handleStartJob(job)}
-                      variant="contained"
+                      variant="filled"
                       size="small"
                       style={[styles.accordionButton, styles.smallButton, { backgroundColor: theme.success }]}
                     />
@@ -879,7 +879,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
                     <MaterialButton
                       title="Complete Job"
                       onPress={() => handleCompleteJob(job)}
-                      variant="contained"
+                      variant="filled"
                       size="small"
                       style={[styles.accordionButton, styles.smallButton, { backgroundColor: theme.primary }]}
                     />
@@ -1068,7 +1068,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
         onClose={() => setShowConversationModal(false)}
         conversation={selectedConversation}
         onMessageSent={handleMessageSent}
-        user={user}
+        user={user || undefined}
         theme={theme}
       />
 

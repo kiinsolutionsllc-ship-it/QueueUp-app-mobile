@@ -61,10 +61,6 @@ module.exports = function(api) {
             transform: '@expo/vector-icons/${member}',
             preventFullImport: true,
           },
-          'react-native-paper': {
-            transform: 'react-native-paper/${member}',
-            preventFullImport: true,
-          },
         },
       ],
     ],

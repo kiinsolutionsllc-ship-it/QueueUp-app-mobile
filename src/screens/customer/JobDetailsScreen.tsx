@@ -11,7 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useUnifiedMessaging } from '../../contexts/UnifiedMessagingContext';
@@ -348,7 +348,7 @@ const JobDetailsScreen: React.FC<JobDetailsScreenProps> = ({ navigation, route }
               <MaterialButton
                 title="Message Mechanic"
                 onPress={handleMessageMechanic}
-                variant="contained"
+                variant="filled"
                 style={styles.actionButton}
                 icon="message"
               />
@@ -381,7 +381,7 @@ const JobDetailsScreen: React.FC<JobDetailsScreenProps> = ({ navigation, route }
         onClose={() => setShowConversationModal(false)}
         conversation={selectedConversation}
         onMessageSent={handleMessageSent}
-        user={user}
+        user={user || undefined}
         theme={theme}
       />
     </View>

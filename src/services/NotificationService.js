@@ -1,14 +1,13 @@
 // Enhanced Notification Service
 // Handles all notification operations for job updates and system events
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Uses Supabase for data storage and Firebase for push notifications
+import { safeSupabase, TABLES } from '../config/supabaseConfig';
 import PushNotificationService from './PushNotificationService';
 import EmailSmsNotificationService from './EmailSmsNotificationService';
 
-const NOTIFICATION_STORAGE_KEY = 'app_notifications';
-
 class NotificationService {
   constructor() {
-    this.notifications = []; // In-memory storage for notifications
+    this.notifications = []; // In-memory cache for notifications
     this.isInitialized = false;
   }
 
@@ -19,7 +18,7 @@ class NotificationService {
     try {
       await this.loadNotifications();
       
-      // Initialize other notification services
+      // Initialize Firebase push notification service for Play Store deployment
       await PushNotificationService.initialize();
       await EmailSmsNotificationService.initialize();
       
@@ -31,39 +30,70 @@ class NotificationService {
     }
   }
 
-  // Load notifications from storage
+  // Load notifications from Supabase
   async loadNotifications() {
     try {
-      const data = await AsyncStorage.getItem(NOTIFICATION_STORAGE_KEY);
-      this.notifications = data ? JSON.parse(data) : [];
+      if (!safeSupabase) {
+        console.warn('NotificationService: Supabase not configured, using empty array');
+        this.notifications = [];
+        return;
+      }
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.NOTIFICATIONS)
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100); // Load last 100 notifications
+
+      if (error) {
+        console.error('NotificationService: Error loading notifications from Supabase:', error);
+        this.notifications = [];
+        return;
+      }
+
+      this.notifications = data || [];
+      console.log(`NotificationService: Loaded ${this.notifications.length} notifications from Supabase`);
     } catch (error) {
       console.error('NotificationService: Error loading notifications:', error);
       this.notifications = [];
     }
   }
 
-  // Save notifications to storage
-  async saveNotifications() {
-    try {
-      await AsyncStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(this.notifications));
-    } catch (error) {
-      console.error('NotificationService: Error saving notifications:', error);
-    }
-  }
-
   // Create a new notification
   async createNotification(notificationData) {
     try {
+      if (!safeSupabase) {
+        console.warn('NotificationService: Supabase not configured, cannot create notification');
+        return { success: false, error: 'Supabase not configured' };
+      }
+
       const notification = {
-        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         ...notificationData,
-        createdAt: new Date().toISOString(),
-        read: false,
+        is_read: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
-      this.notifications.push(notification);
-      await this.saveNotifications();
-      return { success: true, data: notification };
+      const { data, error } = await safeSupabase
+        .from(TABLES.NOTIFICATIONS)
+        .insert([notification])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('NotificationService: Error creating notification in Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      this.notifications.unshift(data);
+
+      // Send Firebase push notification if configured
+      if (notificationData.sendPush && notificationData.userId) {
+        await this.sendPushNotification(notificationData.userId, notificationData.title, notificationData.body);
+      }
+
+      return { success: true, data };
     } catch (error) {
       console.error('NotificationService: Error creating notification:', error);
       return { success: false, error: error.message };
@@ -73,12 +103,28 @@ class NotificationService {
   // Get notifications for a user
   async getNotificationsForUser(userId, limit = 50) {
     try {
-      const userNotifications = this.notifications
-        .filter(n => n.userId === userId)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, limit);
+      if (!safeSupabase) {
+        console.warn('NotificationService: Supabase not configured, using local cache');
+        const userNotifications = this.notifications
+          .filter(n => n.user_id === userId)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, limit);
+        return { success: true, data: userNotifications };
+      }
 
-      return { success: true, data: userNotifications };
+      const { data, error } = await safeSupabase
+        .from(TABLES.NOTIFICATIONS)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('NotificationService: Error fetching notifications from Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: data || [] };
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return { success: false, error: error.message };
@@ -88,14 +134,41 @@ class NotificationService {
   // Mark notification as read
   async markAsRead(notificationId) {
     try {
-      const notification = this.notifications.find(n => n.id === notificationId);
-      if (notification) {
-        notification.read = true;
-        notification.readAt = new Date().toISOString();
-        return { success: true, data: notification };
-      } else {
-        return { success: false, error: 'Notification not found' };
+      if (!safeSupabase) {
+        console.warn('NotificationService: Supabase not configured, updating local cache only');
+        const notification = this.notifications.find(n => n.id === notificationId);
+        if (notification) {
+          notification.is_read = true;
+          notification.read_at = new Date().toISOString();
+          return { success: true, data: notification };
+        } else {
+          return { success: false, error: 'Notification not found' };
+        }
       }
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.NOTIFICATIONS)
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', notificationId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('NotificationService: Error marking notification as read in Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      const notificationIndex = this.notifications.findIndex(n => n.id === notificationId);
+      if (notificationIndex !== -1) {
+        this.notifications[notificationIndex] = data;
+      }
+
+      return { success: true, data };
     } catch (error) {
       console.error('Error marking notification as read:', error);
       return { success: false, error: error.message };
@@ -105,13 +178,41 @@ class NotificationService {
   // Mark all notifications as read for a user
   async markAllAsRead(userId) {
     try {
-      const userNotifications = this.notifications.filter(n => n.userId === userId && !n.read);
-      userNotifications.forEach(notification => {
-        notification.read = true;
-        notification.readAt = new Date().toISOString();
+      if (!safeSupabase) {
+        console.warn('NotificationService: Supabase not configured, updating local cache only');
+        const userNotifications = this.notifications.filter(n => n.user_id === userId && !n.is_read);
+        userNotifications.forEach(notification => {
+          notification.is_read = true;
+          notification.read_at = new Date().toISOString();
+        });
+        return { success: true, data: userNotifications };
+      }
+
+      const { data, error } = await safeSupabase
+        .from(TABLES.NOTIFICATIONS)
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+        .select();
+
+      if (error) {
+        console.error('NotificationService: Error marking all notifications as read in Supabase:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Update local cache
+      this.notifications.forEach(notification => {
+        if (notification.user_id === userId && !notification.is_read) {
+          notification.is_read = true;
+          notification.read_at = new Date().toISOString();
+        }
       });
 
-      return { success: true, data: userNotifications };
+      return { success: true, data: data || [] };
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       return { success: false, error: error.message };
@@ -627,6 +728,22 @@ class NotificationService {
       default:
         console.log(`No SMS notification handler for ${eventType}`);
         return { success: false, reason: 'No handler' };
+    }
+  }
+
+  // Send Firebase push notification
+  async sendPushNotification(userId, title, body, data = {}) {
+    try {
+      // This will be implemented with Firebase Cloud Messaging
+      // For now, we'll use the existing PushNotificationService
+      await PushNotificationService.sendNotification({
+        userId,
+        title,
+        body,
+        data
+      });
+    } catch (error) {
+      console.error('NotificationService: Error sending push notification:', error);
     }
   }
 

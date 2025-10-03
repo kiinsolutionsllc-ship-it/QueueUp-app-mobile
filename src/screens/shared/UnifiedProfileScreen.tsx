@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useLocation } from '../../contexts/LocationContext';

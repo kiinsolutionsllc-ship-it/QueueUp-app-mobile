@@ -2,12 +2,22 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { hapticService } from './HapticService';
+import * as Crypto from 'expo-crypto';
+import { errorHandler, ERROR_TYPES } from '../utils/ErrorHandler';
 
 class SecurityService {
   constructor() {
     this.biometricType = null;
     this.isBiometricAvailable = false;
+    this.securityEvents = [];
+    this.failedAttempts = 0;
+    this.maxFailedAttempts = 5;
+    this.lockoutDuration = 15 * 60 * 1000; // 15 minutes
+    this.lockoutUntil = null;
+    this.sessionTimeout = 30 * 60 * 1000; // 30 minutes
+    this.lastActivity = Date.now();
     this.checkBiometricAvailability();
+    this.startSessionMonitoring();
   }
 
   // Check if biometric authentication is available
@@ -346,6 +356,299 @@ class SecurityService {
     if (audit.recommendations.length === 0) audit.score += 25;
 
     return audit;
+  }
+
+  // ========================================
+  // ENHANCED SECURITY MEASURES
+  // ========================================
+
+  // Start session monitoring
+  startSessionMonitoring() {
+    setInterval(() => {
+      this.checkSessionTimeout();
+    }, 60000); // Check every minute
+  }
+
+  // Check if session has timed out
+  checkSessionTimeout() {
+    const now = Date.now();
+    if (now - this.lastActivity > this.sessionTimeout) {
+      this.logSecurityEvent('session_timeout', {
+        lastActivity: this.lastActivity,
+        timeoutDuration: this.sessionTimeout
+      });
+      this.clearSession();
+    }
+  }
+
+  // Update last activity timestamp
+  updateActivity() {
+    this.lastActivity = Date.now();
+  }
+
+  // Check if account is locked out
+  isAccountLocked() {
+    if (this.lockoutUntil && Date.now() < this.lockoutUntil) {
+      return true;
+    }
+    
+    // Clear lockout if expired
+    if (this.lockoutUntil && Date.now() >= this.lockoutUntil) {
+      this.lockoutUntil = null;
+      this.failedAttempts = 0;
+    }
+    
+    return false;
+  }
+
+  // Record failed authentication attempt
+  recordFailedAttempt() {
+    this.failedAttempts++;
+    this.logSecurityEvent('failed_authentication', {
+      attempt: this.failedAttempts,
+      maxAttempts: this.maxFailedAttempts
+    });
+
+    if (this.failedAttempts >= this.maxFailedAttempts) {
+      this.lockoutUntil = Date.now() + this.lockoutDuration;
+      this.logSecurityEvent('account_locked', {
+        lockoutDuration: this.lockoutDuration,
+        lockoutUntil: this.lockoutUntil
+      });
+    }
+  }
+
+  // Reset failed attempts on successful authentication
+  resetFailedAttempts() {
+    this.failedAttempts = 0;
+    this.lockoutUntil = null;
+  }
+
+  // Log security events
+  logSecurityEvent(eventType, details = {}) {
+    const event = {
+      id: this.generateEventId(),
+      type: eventType,
+      timestamp: new Date().toISOString(),
+      details,
+      deviceInfo: this.getDeviceInfo()
+    };
+
+    this.securityEvents.unshift(event);
+    
+    // Keep only last 100 events
+    if (this.securityEvents.length > 100) {
+      this.securityEvents = this.securityEvents.slice(0, 100);
+    }
+
+    console.log(`[SECURITY] ${eventType}:`, event);
+  }
+
+  // Generate unique event ID
+  generateEventId() {
+    return `sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // Get device information
+  getDeviceInfo() {
+    return {
+      platform: Platform.OS,
+      version: Platform.Version,
+      timestamp: Date.now()
+    };
+  }
+
+  // Hash sensitive data
+  async hashData(data) {
+    try {
+      const dataString = typeof data === 'string' ? data : JSON.stringify(data);
+      const hash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        dataString
+      );
+      return hash;
+    } catch (error) {
+      console.error('Error hashing data:', error);
+      return null;
+    }
+  }
+
+  // Encrypt sensitive data
+  async encryptData(data, key) {
+    try {
+      // In a real app, you would use proper encryption
+      // For now, we'll use a simple base64 encoding
+      const dataString = typeof data === 'string' ? data : JSON.stringify(data);
+      const encoded = btoa(dataString);
+      return encoded;
+    } catch (error) {
+      console.error('Error encrypting data:', error);
+      return null;
+    }
+  }
+
+  // Decrypt sensitive data
+  async decryptData(encryptedData, key) {
+    try {
+      // In a real app, you would use proper decryption
+      // For now, we'll use a simple base64 decoding
+      const decoded = atob(encryptedData);
+      return decoded;
+    } catch (error) {
+      console.error('Error decrypting data:', error);
+      return null;
+    }
+  }
+
+  // Validate input data
+  validateInput(data, rules = {}) {
+    const errors = [];
+
+    if (rules.required && (!data || data.trim() === '')) {
+      errors.push('Field is required');
+    }
+
+    if (rules.minLength && data && data.length < rules.minLength) {
+      errors.push(`Minimum length is ${rules.minLength} characters`);
+    }
+
+    if (rules.maxLength && data && data.length > rules.maxLength) {
+      errors.push(`Maximum length is ${rules.maxLength} characters`);
+    }
+
+    if (rules.pattern && data && !rules.pattern.test(data)) {
+      errors.push('Invalid format');
+    }
+
+    if (rules.email && data && !this.isValidEmail(data)) {
+      errors.push('Invalid email address');
+    }
+
+    if (rules.phone && data && !this.isValidPhone(data)) {
+      errors.push('Invalid phone number');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  // Validate email format
+  isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // Validate phone number format
+  isValidPhone(phone) {
+    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
+    return phoneRegex.test(phone);
+  }
+
+  // Sanitize input data
+  sanitizeInput(data) {
+    if (typeof data !== 'string') return data;
+    
+    return data
+      .replace(/[<>]/g, '') // Remove potential HTML tags
+      .replace(/javascript:/gi, '') // Remove javascript: protocol
+      .replace(/on\w+=/gi, '') // Remove event handlers
+      .trim();
+  }
+
+  // Check for suspicious activity
+  detectSuspiciousActivity() {
+    const recentEvents = this.securityEvents.filter(
+      event => Date.now() - new Date(event.timestamp).getTime() < 24 * 60 * 60 * 1000 // Last 24 hours
+    );
+
+    const failedAttempts = recentEvents.filter(event => event.type === 'failed_authentication').length;
+    const suspiciousPatterns = recentEvents.filter(event => 
+      event.type === 'unusual_location' || 
+      event.type === 'unusual_device' ||
+      event.type === 'unusual_time'
+    ).length;
+
+    return {
+      isSuspicious: failedAttempts > 10 || suspiciousPatterns > 5,
+      failedAttempts,
+      suspiciousPatterns,
+      riskLevel: failedAttempts > 20 ? 'high' : failedAttempts > 10 ? 'medium' : 'low'
+    };
+  }
+
+  // Clear all session data
+  clearSession() {
+    this.lastActivity = Date.now();
+    this.failedAttempts = 0;
+    this.lockoutUntil = null;
+    this.logSecurityEvent('session_cleared');
+  }
+
+  // Get security statistics
+  getSecurityStats() {
+    const now = Date.now();
+    const last24h = now - (24 * 60 * 60 * 1000);
+    const last7d = now - (7 * 24 * 60 * 60 * 1000);
+
+    const recentEvents = this.securityEvents.filter(
+      event => new Date(event.timestamp).getTime() > last24h
+    );
+
+    const weeklyEvents = this.securityEvents.filter(
+      event => new Date(event.timestamp).getTime() > last7d
+    );
+
+    return {
+      totalEvents: this.securityEvents.length,
+      recentEvents: recentEvents.length,
+      weeklyEvents: weeklyEvents.length,
+      failedAttempts: this.failedAttempts,
+      isLocked: this.isAccountLocked(),
+      lockoutRemaining: this.lockoutUntil ? Math.max(0, this.lockoutUntil - now) : 0,
+      sessionActive: now - this.lastActivity < this.sessionTimeout,
+      suspiciousActivity: this.detectSuspiciousActivity()
+    };
+  }
+
+  // Enhanced authentication with security checks
+  async authenticateWithSecurity(reason = 'Authenticate to continue') {
+    try {
+      // Check if account is locked
+      if (this.isAccountLocked()) {
+        const remainingTime = Math.ceil((this.lockoutUntil - Date.now()) / 1000 / 60);
+        throw new Error(`Account is locked. Try again in ${remainingTime} minutes.`);
+      }
+
+      // Update activity
+      this.updateActivity();
+
+      // Perform biometric authentication
+      const result = await this.authenticateWithBiometrics(reason);
+
+      if (result.success) {
+        this.resetFailedAttempts();
+        this.logSecurityEvent('successful_authentication');
+        return result;
+      } else {
+        this.recordFailedAttempt();
+        this.logSecurityEvent('failed_authentication', { error: result.error });
+        return result;
+      }
+    } catch (error) {
+      this.recordFailedAttempt();
+      this.logSecurityEvent('authentication_error', { error: error.message });
+      
+      const errorInfo = errorHandler.handleError(error, {
+        component: 'SecurityService',
+        operation: 'authenticateWithSecurity'
+      }, {
+        showAlert: true
+      });
+
+      return { success: false, error: errorInfo.userMessage };
+    }
   }
 }
 

@@ -34,8 +34,8 @@ export default function PrivacySecurityScreen({ navigation }: PrivacySecurityScr
     shareDataWithPartners: false,
   });
 
-  const handleToggle = (key) => {
-    setPrivacySettings(prev => ({
+  const handleToggle = (key: any) => {
+    setPrivacySettings((prev: any) => ({
       ...prev,
       [key]: !prev[key],
     }));
@@ -61,7 +61,7 @@ export default function PrivacySecurityScreen({ navigation }: PrivacySecurityScr
     }
   };
 
-  const renderPrivacyItem = (key, title, subtitle, icon) => (
+  const renderPrivacyItem = (key: any, title: any, subtitle: any, icon: any) => (
     <View key={key} style={styles.privacyItem}>
       <View style={styles.privacyInfo}>
         <IconFallback name={icon} size={24} color={theme.primary} />

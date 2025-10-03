@@ -13,7 +13,7 @@ import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useReview } from '../../contexts/ReviewContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import NotificationService from '../../services/NotificationService';
 import { useVehicle } from '../../contexts/VehicleContext';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -39,7 +39,7 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
   const alreadyReviewed = !!hasUserReviewed?.(jobId, user?.id || 'customer1', 'customer_to_mechanic');
 
   // Helper function to resolve vehicle data (handle both objects and IDs)
-  const resolveVehicleData = (vehicle) => {
+  const resolveVehicleData = (vehicle: any) => {
     if (!vehicle) return null;
     
     // If it's already an object with make/model/year, return it
@@ -60,7 +60,7 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
   };
 
   // Helper function to get urgency color
-  const getUrgencyColor = (urgency) => {
+  const getUrgencyColor = (urgency: any) => {
     switch (urgency) {
       case 'high': return '#EF4444';
       case 'medium': return '#F59E0B';
@@ -88,12 +88,12 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
     { value: 5, label: 'Excellent', color: theme.success },
   ];
 
-  const handleRatingSelect = (value) => {
+  const handleRatingSelect = (value: any) => {
     setRating(value);
   };
 
-  const handleAspectRating = (aspect, value) => {
-    setAspectRatings(prev => ({
+  const handleAspectRating = (aspect: any, value: any) => {
+    setAspectRatings((prev: any) => ({
       ...prev,
       [aspect]: value
     }));
@@ -233,7 +233,7 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
                   <IconFallback name="build" size={16} color={theme.primary} />
                   <Text style={[styles.jobInfoLabel, { color: theme.textSecondary }]}>Service Type</Text>
                   <Text style={[styles.jobInfoValue, { color: theme.text }]}>
-                    {formatJobType(job.category) || 'General Service'}
+                    {formatJobType(job.category || '') || 'General Service'}
                   </Text>
                 </View>
                 
@@ -281,7 +281,7 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Service Category:</Text>
                   <Text style={[styles.detailValue, { color: theme.text }]}>
-                    {formatJobType(job.subcategory) || 'General Service'}
+                    {formatJobType(job.subcategory || '') || 'General Service'}
                   </Text>
                 </View>
                 

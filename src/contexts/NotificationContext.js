@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import NotificationService from '../services/NotificationService';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 export const NotificationContext = createContext();
 

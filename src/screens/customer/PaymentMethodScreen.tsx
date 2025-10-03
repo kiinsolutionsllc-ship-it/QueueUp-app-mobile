@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -153,7 +153,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
     }
   };
 
-  const handleSetDefault = async (methodId) => {
+  const handleSetDefault = async (methodId: any) => {
     try {
       if (MOCK_MODE) {
         setSelectedMethod(methodId);
@@ -171,7 +171,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
     }
   };
 
-  const handleDeleteMethod = (methodId) => {
+  const handleDeleteMethod = (methodId: any) => {
     Alert.alert(
       'Delete Payment Method',
       'Are you sure you want to delete this payment method?',
@@ -196,7 +196,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
     );
   };
 
-  const renderPaymentMethod = (method) => {
+  const renderPaymentMethod = (method: any) => {
     const isSelected = selectedMethod === method.id;
     const isDefault = method.isDefault;
 
@@ -398,7 +398,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
               <MaterialButton
                 title="Cancel"
                 onPress={() => setShowAddCard(false)}
-                variant="outline"
+                variant="outlined"
                 style={styles.cancelButton}
               />
               <MaterialButton

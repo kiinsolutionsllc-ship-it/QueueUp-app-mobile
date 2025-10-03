@@ -1,9 +1,10 @@
 // Service Initializer
-// Initializes all services with mock data for development
+// Initializes all services with proper authentication-aware data loading
 
 import UnifiedJobService from './UnifiedJobService';
 import NotificationService from './NotificationService';
 import MechanicService from './MechanicService';
+import PublicDataService from './PublicDataService';
 // Firebase notification service disabled for Expo managed workflow
 // import firebaseNotificationService from './FirebaseNotificationService';
 // MockPaymentService removed - no mock data
@@ -13,15 +14,19 @@ class ServiceInitializer {
     this.initialized = false;
   }
 
-  // Initialize all services with minimal data for testing
+  // Initialize all services with proper authentication-aware data loading
   async initializeServices() {
     if (this.initialized) {
       return;
     }
 
     try {
+      console.log('ServiceInitializer: Initializing services with authentication-aware data loading...');
       
-      // Initialize UnifiedJobService with persistence
+      // Initialize PublicDataService first (can be loaded before authentication)
+      await PublicDataService.initialize();
+      
+      // Initialize UnifiedJobService (will load user data after authentication)
       await UnifiedJobService.initialize();
       
       // Initialize MechanicService
@@ -39,8 +44,31 @@ class ServiceInitializer {
       // MockPaymentService removed - no mock data
       
       this.initialized = true;
+      console.log('ServiceInitializer: All services initialized successfully');
     } catch (error) {
-      console.error('Error initializing services:', error);
+      console.error('ServiceInitializer: Error initializing services:', error);
+    }
+  }
+
+  // Initialize user-specific data after authentication
+  async initializeUserServices(userId, userType) {
+    if (!userId) {
+      console.log('ServiceInitializer: No user ID provided, skipping user service initialization');
+      return;
+    }
+
+    try {
+      console.log(`ServiceInitializer: Initializing user-specific services for ${userType} user:`, userId);
+      
+      // Load user-specific data for services that require authentication
+      await Promise.all([
+        UnifiedJobService.loadUserData(userId, userType),
+        // Add other user-specific service initializations here
+      ]);
+      
+      console.log('ServiceInitializer: User-specific services initialized successfully');
+    } catch (error) {
+      console.error('ServiceInitializer: Error initializing user services:', error);
     }
   }
 

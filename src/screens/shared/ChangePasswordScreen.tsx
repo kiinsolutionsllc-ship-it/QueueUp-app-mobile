@@ -11,7 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 // import MaterialButton from '../../components/shared/MaterialButton';
 // import MaterialTextInput from '../../components/shared/MaterialTextInput';
 import ValidatedForm from '../../components/shared/ValidatedForm';
@@ -36,7 +36,7 @@ export default function ChangePasswordScreen({ navigation }: ChangePasswordScree
     confirmPassword: ['required'],
   };
 
-  const handleChangePassword = async (values) => {
+  const handleChangePassword = async (values: any) => {
     if (values.newPassword !== values.confirmPassword) {
       Alert.alert('Error', 'New passwords do not match');
       return;
@@ -110,7 +110,7 @@ export default function ChangePasswordScreen({ navigation }: ChangePasswordScree
             submitButtonText="Update Password"
             submitButtonVariant="filled"
           >
-            {({ MaterialTextInput }) => (
+            {({ MaterialTextInput }: any) => (
               <View style={styles.form}>
                 <MaterialTextInput
                   name="currentPassword"

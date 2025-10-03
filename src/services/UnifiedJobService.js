@@ -1,9 +1,11 @@
 // Unified Job Service - Single source of truth for all job operations
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES, testSupabaseConnection } from '../config/supabaseConfig';
 import NotificationService from './NotificationService';
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import ChangeOrderService from './ChangeOrderService';
 import EventEmitter from '../utils/EventEmitter';
+import { AuthGuard } from '../utils/AuthGuards';
+import { DataLoadingOptimizer } from '../utils/DataLoadingOptimizer';
 // AsyncStorage removed - using Supabase only
 
 class UnifiedJobService {
@@ -17,7 +19,7 @@ class UnifiedJobService {
 
   get debugEnabled() {
     // Toggle verbose logs here or via env if desired
-    return false;
+    return true; // Enable debug logging to troubleshoot job filtering
   }
 
   // Initialize the service
@@ -25,6 +27,14 @@ class UnifiedJobService {
     if (this.initialized) return;
     
     try {
+      // Test Supabase connection first
+      console.log('🔍 Testing Supabase connection before initialization...');
+      const connectionTest = await testSupabaseConnection();
+      
+      if (!connectionTest) {
+        console.error('❌ Supabase connection test failed - jobs will not be persisted');
+      }
+      
       await this.loadData();
       await NotificationService.initialize();
       await ChangeOrderService.initialize();
@@ -36,33 +46,112 @@ class UnifiedJobService {
     }
   }
 
-  // Load all data from Supabase
-  async loadData() {
-    if (this.debugEnabled) console.log('UnifiedJobService: Loading data from Supabase');
+  // Load user-specific data from Supabase (requires authentication)
+  async loadUserData(userId, userType) {
+    if (!userId) {
+      console.log('UnifiedJobService: No user ID provided, skipping user data load');
+      return;
+    }
+
+    console.log(`UnifiedJobService: Loading data for ${userType} user:`, userId);
     
     try {
-      // Load data from Supabase
-      const [jobsResult, bidsResult, messagesResult] = await Promise.all([
-        safeSupabase.from(TABLES.JOBS).select('*'),
-        safeSupabase.from(TABLES.BIDS).select('*'),
-        safeSupabase.from(TABLES.MESSAGES).select('*')
-      ]);
+      if (!safeSupabase) {
+        console.warn('UnifiedJobService: Supabase not configured');
+        this.jobs = [];
+        this.bids = [];
+        this.messages = [];
+        this.jobHistory = [];
+        return;
+      }
 
-      // Set data from Supabase results
-      this.jobs = jobsResult.data || [];
-      this.bids = bidsResult.data || [];
-      this.messages = messagesResult.data || [];
+      // Use optimized data loading with caching
+      const cacheKey = `user_data_${userId}_${userType}`;
+      
+      const userData = await DataLoadingOptimizer.getData(
+        cacheKey,
+        async () => {
+          let jobsResult, bidsResult, messagesResult;
+
+          if (userType === 'customer') {
+            // Load jobs created by this customer
+            jobsResult = await safeSupabase
+              .from(TABLES.JOBS)
+              .select('*')
+              .eq('customer_id', userId);
+            
+            // Load bids for jobs created by this customer
+            bidsResult = await safeSupabase
+              .from(TABLES.BIDS)
+              .select('*')
+              .in('job_id', jobsResult.data?.map(job => job.id) || []);
+            
+            // Load messages for conversations involving this customer
+            messagesResult = await safeSupabase
+              .from(TABLES.MESSAGES)
+              .select('*')
+              .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
+
+          } else if (userType === 'mechanic') {
+            // Load jobs assigned to this mechanic
+            jobsResult = await safeSupabase
+              .from(TABLES.JOBS)
+              .select('*')
+              .eq('mechanic_id', userId);
+            
+            // Load bids made by this mechanic
+            bidsResult = await safeSupabase
+              .from(TABLES.BIDS)
+              .select('*')
+              .eq('mechanic_id', userId);
+            
+            // Load messages for conversations involving this mechanic
+            messagesResult = await safeSupabase
+              .from(TABLES.MESSAGES)
+              .select('*')
+              .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
+          } else {
+            throw new Error(`Unknown user type: ${userType}`);
+          }
+
+          return {
+            jobs: jobsResult.data || [],
+            bids: bidsResult.data || [],
+            messages: messagesResult.data || []
+          };
+        },
+        {
+          cache: true,
+          ttl: 2 * 60 * 1000 // 2 minutes cache for user data
+        }
+      );
+
+      // Set data from optimized results
+      this.jobs = userData.jobs;
+      this.bids = userData.bids;
+      this.messages = userData.messages;
       this.jobHistory = []; // Job history can be derived from jobs
 
-      if (this.debugEnabled) console.log('UnifiedJobService: Loaded data - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
+      console.log('UnifiedJobService: Loaded user data - Jobs:', this.jobs.length, 'Bids:', this.bids.length);
     } catch (error) {
-      console.error('UnifiedJobService: Error loading data from Supabase:', error);
+      console.error('UnifiedJobService: Error loading user data from Supabase:', error);
       // Initialize with empty arrays if loading fails
       this.jobs = [];
       this.bids = [];
       this.messages = [];
       this.jobHistory = [];
     }
+  }
+
+  // Legacy method for backward compatibility - now just initializes empty data
+  async loadData() {
+    console.log('UnifiedJobService: Initializing with empty data (user-specific data will be loaded after authentication)');
+    
+    // Initialize with empty arrays - user data will be loaded after authentication
+    this.jobs = [];
+    this.bids = [];
+    this.messages = [];
+    this.jobHistory = [];
   }
 
   // Save data to Supabase (individual operations will handle this)
@@ -447,7 +536,10 @@ class UnifiedJobService {
     });
     
     // Save to Supabase
-    const { data, error } = await supabase
+    console.log('UnifiedJobService - Saving job to Supabase with data:', jobDataForSupabase);
+    console.log('UnifiedJobService - Using table:', TABLES.JOBS);
+    
+    const { data, error } = await safeSupabase
       .from(TABLES.JOBS)
       .insert([jobDataForSupabase])
       .select()
@@ -455,8 +547,16 @@ class UnifiedJobService {
 
     if (error) {
       console.error('UnifiedJobService - Error creating job in Supabase:', error);
+      console.error('UnifiedJobService - Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return { success: false, error: error.message };
     }
+
+    console.log('UnifiedJobService - Job successfully saved to Supabase:', data);
 
     // Create job object for local state
     const job = {
@@ -569,7 +669,7 @@ class UnifiedJobService {
     };
 
     // Update in Supabase
-    const { data, error } = await supabase
+    const { data, error } = await safeSupabase
       .from(TABLES.JOBS)
       .update(updateData)
       .eq('id', jobId)
@@ -803,6 +903,13 @@ class UnifiedJobService {
   }
 
   getJobsByCustomer(customerId) {
+    // Authentication guard
+    const authCheck = AuthGuard.requireCustomer(customerId);
+    if (!authCheck.success) {
+      console.error('UnifiedJobService: Authentication failed:', authCheck.error);
+      return [];
+    }
+
     if (this.debugEnabled) {
       console.log('UnifiedJobService - getJobsByCustomer called with:', customerId);
       console.log('UnifiedJobService - All jobs:', this.jobs.length, this.jobs.map(job => ({ id: job.id, customerId: job.customerId, title: job.title })));
@@ -817,6 +924,13 @@ class UnifiedJobService {
   }
 
   getJobsByMechanic(mechanicId) {
+    // Authentication guard
+    const authCheck = AuthGuard.requireMechanic(mechanicId);
+    if (!authCheck.success) {
+      console.error('UnifiedJobService: Authentication failed:', authCheck.error);
+      return [];
+    }
+
     return this.jobs.filter(job => {
       // Check if job has selectedMechanicId (direct assignment)
       if (job.selectedMechanicId === mechanicId) {
@@ -1544,6 +1658,16 @@ class UnifiedJobService {
     await this.syncChangeOrdersWithJobs();
     // Ensure any new stales are expired on refresh as well
     this.expireStaleJobs();
+  }
+
+  // Refresh user-specific data and clear cache
+  async refreshUserData(userId, userType) {
+    // Clear cache for this user's data
+    const cacheKey = `user_data_${userId}_${userType}`;
+    DataLoadingOptimizer.clearCache(cacheKey);
+    
+    // Reload user data
+    await this.loadUserData(userId, userType);
   }
 
   // Sync change orders with jobs to ensure job status reflects change order state

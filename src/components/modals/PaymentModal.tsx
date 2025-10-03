@@ -13,7 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { PaymentModalProps, PaymentData, PaymentResult } from '../../types/JobTypes';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useStripeHook } from '../../providers/StripeProvider';
 import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { MOCK_MODE } from '../../config/payment';

@@ -11,7 +11,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -44,7 +44,7 @@ export default function AvailabilityStatusScreen({ navigation }: AvailabilitySta
 
   const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  const handleStatusChange = async (newStatus) => {
+  const handleStatusChange = async (newStatus: any) => {
     try {
       setCurrentStatus(newStatus);
       await updateAvailabilityStatus(newStatus);
@@ -55,7 +55,7 @@ export default function AvailabilityStatusScreen({ navigation }: AvailabilitySta
     }
   };
 
-  const handleHoursChange = async (day, field, value) => {
+  const handleHoursChange = async (day: any, field: any, value: any) => {
     try {
       const newHours = {
         ...hours,
@@ -104,7 +104,7 @@ export default function AvailabilityStatusScreen({ navigation }: AvailabilitySta
     );
   };
 
-  const StatusCard = ({ status }) => (
+  const StatusCard = ({ status }: any) => (
     <TouchableOpacity
       style={[
         styles.statusCard,
@@ -136,7 +136,7 @@ export default function AvailabilityStatusScreen({ navigation }: AvailabilitySta
     </TouchableOpacity>
   );
 
-  const DaySchedule = ({ day, dayName }) => (
+  const DaySchedule = ({ day, dayName }: any) => (
     <MaterialCard style={[styles.dayCard, { backgroundColor: theme.cardBackground }]}>
       <View style={styles.dayHeader}>
         <Text style={[styles.dayName, { color: theme.text }]}>{dayName}</Text>

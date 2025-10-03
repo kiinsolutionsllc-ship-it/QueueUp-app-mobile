@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import ModernInput from '../../components/shared/ModernInput';
 import MaterialButton from '../../components/shared/MaterialButton';

@@ -193,9 +193,17 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
       const result = await UnifiedJobService.createJob(jobData);
       console.log('SimplifiedJobContext - Job creation result:', result);
       
-      console.log('SimplifiedJobContext - Refreshing data after job creation...');
-      await refreshData();
-      console.log('SimplifiedJobContext - Data refreshed. Current jobs count:', jobs.length);
+      if (result.success) {
+        console.log('SimplifiedJobContext - Refreshing data after job creation...');
+        await refreshData();
+        
+        // Force a re-render by getting the latest jobs from the service
+        const latestJobs = UnifiedJobService.getAllJobs();
+        console.log('SimplifiedJobContext - Latest jobs from service:', latestJobs.length);
+        setJobs(latestJobs);
+        
+        console.log('SimplifiedJobContext - Data refreshed. Current jobs count:', latestJobs.length);
+      }
       
       return result;
     } catch (error) {

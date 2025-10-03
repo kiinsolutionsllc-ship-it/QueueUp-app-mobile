@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -73,7 +73,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(fav =>
         fav.mechanicName.toLowerCase().includes(query) ||
-        fav.specialties.some(specialty => specialty.toLowerCase().includes(query)) ||
+        fav.specialties.some((specialty: any) => specialty.toLowerCase().includes(query)) ||
         fav.location.toLowerCase().includes(query)
       );
     }
@@ -113,7 +113,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
     setRefreshing(false);
   };
 
-  const handleRemoveFavorite = async (mechanicId) => {
+  const handleRemoveFavorite = async (mechanicId: any) => {
     try {
       await hapticService.buttonPress();
       
@@ -147,7 +147,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
     }
   };
 
-  const handleViewProfile = async (favorite) => {
+  const handleViewProfile = async (favorite: any) => {
     try {
       await hapticService.buttonPress();
       navigation.navigate('MechanicProfile', {
@@ -159,7 +159,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
     }
   };
 
-  const handleBookService = async (favorite) => {
+  const handleBookService = async (favorite: any) => {
     try {
       await hapticService.buttonPress();
       navigation.navigate('CreateJob', {
@@ -171,7 +171,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
     }
   };
 
-  const renderFavoriteCard = (favorite) => (
+  const renderFavoriteCard = (favorite: any) => (
     <Animated.View
       key={favorite.id}
       style={[
@@ -228,7 +228,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
 
         {/* Specialties */}
         <View style={styles.specialtiesContainer}>
-          {favorite.specialties.slice(0, 3).map((specialty, index) => (
+          {favorite.specialties.slice(0, 3).map((specialty: any, index: any) => (
             <View key={index} style={[styles.specialtyTag, { backgroundColor: theme.surface }]}>
               <Text style={[styles.specialtyText, { color: theme.textSecondary }]}>
                 {specialty}

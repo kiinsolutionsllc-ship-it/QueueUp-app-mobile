@@ -3,7 +3,17 @@
  * Ensures all fallback user IDs follow the new CUSTOMER-/MECHANIC- format
  */
 
-import { MOCK_CONSTANTS } from '../services/MockServiceManager';
+// Mock constants for fallback user IDs
+const MOCK_CONSTANTS = {
+  CUSTOMER_ID_PREFIX: 'CUSTOMER-',
+  MECHANIC_ID_PREFIX: 'MECHANIC-',
+  FALLBACK_CUSTOMER_ID: 'CUSTOMER-fallback-user',
+  FALLBACK_MECHANIC_ID: 'MECHANIC-fallback-user',
+  USERS: {
+    CUSTOMER: { id: 'CUSTOMER-fallback-user' },
+    MECHANIC: { id: 'MECHANIC-fallback-user' }
+  }
+};
 
 /**
  * Get a fallback customer ID in the new format

@@ -14,7 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '../../hooks/useResponsive';
 import { Heading3, Heading4 } from '../../components/shared/ResponsiveText';
@@ -92,7 +92,7 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const handleRecallPress = (recall) => {
+  const handleRecallPress = (recall: any) => {
     Alert.alert(
       recall.title,
       `${recall.description}\n\nRecall Number: ${recall.recallNumber}\nContact: ${recall.contactInfo}`,
@@ -104,7 +104,7 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     );
   };
 
-  const handleScheduleRepair = (recall) => {
+  const handleScheduleRepair = (recall: any) => {
     // Navigate to booking screen with recall info
     navigation.navigate('CreateJob', { 
       recallId: recall.id,
@@ -114,7 +114,7 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     });
   };
 
-  const handleLearnMore = (recall) => {
+  const handleLearnMore = (recall: any) => {
     // In a real app, this would open a web view or external link
     Alert.alert(
       'Recall Details',
@@ -123,7 +123,7 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     );
   };
 
-  const getSeverityColor = (severity) => {
+  const getSeverityColor = (severity: any) => {
     switch (severity) {
       case 'high': return theme.error;
       case 'medium': return theme.warning;
@@ -132,7 +132,7 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     }
   };
 
-  const getSeverityIcon = (severity) => {
+  const getSeverityIcon = (severity: any) => {
     switch (severity) {
       case 'high': return 'warning';
       case 'medium': return 'info';
@@ -141,11 +141,11 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     }
   };
 
-  const getActionRequiredColor = (actionRequired) => {
+  const getActionRequiredColor = (actionRequired: any) => {
     return actionRequired ? theme.error : theme.success;
   };
 
-  const renderRecallCard = (recall) => (
+  const renderRecallCard = (recall: any) => (
     <TouchableOpacity
       key={recall.id}
       style={[styles.recallCard, { backgroundColor: theme.cardBackground }]}
@@ -216,8 +216,8 @@ export default function RecallNotificationsScreen({ navigation }: RecallNotifica
     </TouchableOpacity>
   );
 
-  const urgentRecalls = recalls.filter(recall => recall.actionRequired);
-  const infoRecalls = recalls.filter(recall => !recall.actionRequired);
+  const urgentRecalls = recalls.filter((recall: any) => recall.actionRequired);
+  const infoRecalls = recalls.filter((recall: any) => !recall.actionRequired);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

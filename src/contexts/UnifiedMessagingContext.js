@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import enhancedUnifiedMessagingService from '../services/EnhancedUnifiedMessagingService';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 const UnifiedMessagingContext = createContext();
 

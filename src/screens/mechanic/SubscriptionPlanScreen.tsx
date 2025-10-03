@@ -12,7 +12,7 @@ import {
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 
 
@@ -57,7 +57,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
   }, [fadeAnim, slideAnim, scaleAnim]);
 
   // Use real subscription plans from context, with UI enhancements
-  const subscriptionTiers = subscriptionPlans.length > 0 ? subscriptionPlans.map(plan => ({
+  const subscriptionTiers = subscriptionPlans.length > 0 ? subscriptionPlans.map((plan: any) => ({
     ...plan,
     // Add UI-specific properties
     icon: plan.id === 'basic' ? 'work' : plan.id === 'starter' ? 'rocket-launch' : plan.id === 'professional' ? 'star' : 'diamond',
@@ -71,7 +71,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
     disabled: plan.is_coming_soon || !plan.is_active
   })) : [];
 
-  const handleSelectTier = (tierId) => {
+  const handleSelectTier = (tierId: any) => {
     setSelectedTier(tierId);
     // Add haptic feedback
     if (Platform.OS === 'ios') {
@@ -80,7 +80,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
     }
   };
 
-  const handleSubscribe = async (tier) => {
+  const handleSubscribe = async (tier: any) => {
     if (!user?.id) {
       Alert.alert('Error', 'Please log in to subscribe to a plan.');
       return;
@@ -125,7 +125,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
     }
   };
 
-  const renderTierCard = (tier) => {
+  const renderTierCard = (tier: any) => {
     const isComingSoon = tier.is_coming_soon || tier.disabled;
     const isSelected = selectedTier === tier.id;
     
@@ -226,7 +226,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
 
         <View style={styles.featuresContainer}>
           <Text style={[styles.featuresTitle, { color: theme.text }]}>What's included:</Text>
-          {tier.features.map((feature, featureIndex) => (
+          {tier.features.map((feature: any, featureIndex: any) => (
             <View key={featureIndex} style={styles.featureItem}>
               <View style={[styles.checkIcon, { backgroundColor: theme.success + '20' }]}>
                 <IconFallback name="check" size={12} color={theme.success} />
@@ -239,7 +239,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
         {tier.limitations.length > 0 && (
           <View style={styles.limitationsContainer}>
             <Text style={[styles.limitationsTitle, { color: theme.textSecondary }]}>Limitations:</Text>
-            {tier.limitations.map((limitation, limitationIndex) => (
+            {tier.limitations.map((limitation: any, limitationIndex: any) => (
               <View key={limitationIndex} style={styles.limitationItem}>
                 <View style={[styles.crossIcon, { backgroundColor: theme.error + '20' }]}>
                   <IconFallback name="close" size={12} color={theme.error} />
@@ -358,7 +358,7 @@ export default function SubscriptionPlanScreen({ navigation }: SubscriptionPlanS
 
           {/* Subscription Tiers */}
           <View style={styles.tiersContainer}>
-            {subscriptionTiers.map((tier) => renderTierCard(tier))}
+            {subscriptionTiers.map((tier: any) => renderTierCard(tier))}
           </View>
 
           {/* Trust Indicators */}

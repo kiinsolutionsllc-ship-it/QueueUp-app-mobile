@@ -21,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import IconFallback from './IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { designTokens } from '../../design-system/DesignSystem';
 import { useJobDetails } from '../../hooks/useJobDetails';
 import {
@@ -30,6 +30,13 @@ import {
   JobNote,
   ImageGalleryItem,
 } from '../../types/JobDetailsTypes';
+import { 
+  usePerformanceOptimization, 
+  useStableCallback, 
+  useStableValue,
+  debounce,
+  throttle 
+} from '../../utils/PerformanceOptimizer';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -420,7 +427,7 @@ const ScheduleRow = memo<{
 
 ScheduleRow.displayName = 'ScheduleRow';
 
-// Main Unified Component
+// Main Unified Component with Performance Optimizations
 const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   visible,
   onClose,
@@ -439,6 +446,9 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   style,
   testID,
 }) => {
+  // Performance monitoring
+  const { renderCount, measureRender } = usePerformanceOptimization('UnifiedJobDetailsModal');
+  
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
   const theme = getCurrentTheme();
@@ -454,6 +464,40 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+
+  // Performance optimized callbacks
+  const handleTabChange = useStableCallback((tab: 'details' | 'timeline' | 'notes') => {
+    setActiveTab(tab);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  const handleImagePress = useStableCallback((index: number) => {
+    setSelectedImageIndex(index);
+    setShowImageGallery(true);
+  }, []);
+
+  const handleCloseImageGallery = useStableCallback(() => {
+    setShowImageGallery(false);
+  }, []);
+
+  const handleAddNotePress = useStableCallback(() => {
+    setShowAddNote(true);
+  }, []);
+
+  const handleCloseAddNote = useStableCallback(() => {
+    setShowAddNote(false);
+  }, []);
+
+  // Debounced functions for performance
+  const debouncedTabChange = useMemo(
+    () => debounce(handleTabChange, 100),
+    [handleTabChange]
+  );
+
+  const throttledImagePress = useMemo(
+    () => throttle(handleImagePress, 300),
+    [handleImagePress]
+  );
 
   // Use custom hook
   const {
@@ -494,7 +538,7 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
     theme,
   });
 
-  // Memoized values
+  // Memoized values for performance
   const memoizedJobTitle = useMemo(() => 
     job ? formatJobTitle(job.title) : '', 
     [job, formatJobTitle]
@@ -504,6 +548,76 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
     job?.description || '', 
     [job?.description]
   );
+
+  const memoizedJobType = useMemo(() => 
+    job ? formatJobType(job.type) : '', 
+    [job, formatJobType]
+  );
+
+  const memoizedVehicle = useMemo(() => 
+    job && job.vehicle ? formatVehicle(job.vehicle) : '', 
+    [job, formatVehicle]
+  );
+
+  const memoizedFormattedDate = useMemo(() => 
+    job && job.scheduledDate ? formatDate(job.scheduledDate) : '', 
+    [job, formatDate]
+  );
+
+  const memoizedFormattedTime = useMemo(() => 
+    job && job.scheduledTime ? formatTime(job.scheduledTime) : '', 
+    [job, formatTime]
+  );
+
+  const memoizedFormattedPrice = useMemo(() => 
+    job && job.price ? formatPrice(job.price) : '', 
+    [job, formatPrice]
+  );
+
+  const memoizedStatusColor = useMemo(() => 
+    job ? getStatusColor(job.status) : theme.primary, 
+    [job, getStatusColor, theme.primary]
+  );
+
+  const memoizedUrgencyColor = useMemo(() => 
+    job ? getUrgencyColor(job.urgency) : theme.warning, 
+    [job, getUrgencyColor, theme.warning]
+  );
+
+  // Memoized image gallery
+  const memoizedImageGallery = useMemo(() => {
+    if (!job?.images || job.images.length === 0) return [];
+    
+    return job.images.map((image, index) => ({
+      id: `image-${index}`,
+      uri: image,
+      index
+    }));
+  }, [job?.images]);
+
+  // Memoized timeline events
+  const memoizedTimelineEvents = useMemo(() => {
+    if (!job?.timeline) return [];
+    
+    return job.timeline.map((event: any, index: number) => ({
+      ...event,
+      id: event.id || `timeline-${index}`,
+      formattedDate: formatDate(event.timestamp),
+      formattedTime: formatTime(event.timestamp)
+    }));
+  }, [job?.timeline, formatDate, formatTime]);
+
+  // Memoized notes
+  const memoizedNotes = useMemo(() => {
+    if (!job?.notes || !Array.isArray(job.notes)) return [];
+    
+    return job.notes.map((note: any, index: number) => ({
+      ...note,
+      id: note.id || `note-${index}`,
+      formattedDate: formatDate(note.createdAt),
+      formattedTime: formatTime(note.createdAt)
+    }));
+  }, [job?.notes, formatDate, formatTime]);
 
   const memoizedVehicleInfo = useMemo(() => 
     job ? formatVehicle(job.vehicle || '') : 'N/A', 
@@ -611,14 +725,6 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
     setShowAddNote(false);
   }, [handleAddNoteHook]);
 
-  const handleImagePress = useCallback((index: number) => {
-    setSelectedImageIndex(index);
-    setShowImageGallery(true);
-  }, []);
-
-  const handleTabChange = useCallback((tab: 'details' | 'timeline' | 'notes') => {
-    setActiveTab(tab);
-  }, []);
 
   // Render functions
   const renderHeader = useCallback(() => (

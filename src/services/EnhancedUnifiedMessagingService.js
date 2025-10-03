@@ -1,5 +1,6 @@
 import { safeSupabase, TABLES } from '../config/supabaseConfig';
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
+import { AuthGuard } from '../utils/AuthGuards';
 // AsyncStorage removed - using Supabase only
 
 /**
@@ -82,34 +83,69 @@ class EnhancedUnifiedMessagingService {
     }
   }
 
-  async loadData() {
+  // Load user-specific messaging data (requires authentication)
+  async loadUserData(userId) {
+    if (!userId) {
+      console.log('EnhancedUnifiedMessagingService: No user ID provided, skipping user data load');
+      return;
+    }
+
+    console.log('EnhancedUnifiedMessagingService: Loading messaging data for user:', userId);
+    
     try {
-      // Load data from Supabase
-      const [conversationsResult, messagesResult, usersResult] = await Promise.all([
-        safeSupabase.from(TABLES.CONVERSATIONS).select('*'),
-        safeSupabase.from(TABLES.MESSAGES).select('*'),
-        safeSupabase.from(TABLES.USERS).select('*')
-      ]);
+      if (!safeSupabase) {
+        console.warn('EnhancedUnifiedMessagingService: Supabase not configured');
+        this.conversations = [];
+        this.messages = [];
+        this.users = new Map();
+        return;
+      }
+
+      // Load conversations where user is a participant
+      const conversationsResult = await safeSupabase
+        .from(TABLES.CONVERSATIONS)
+        .select('*')
+        .contains('participants', [userId]);
+
+      // Load messages for conversations involving this user
+      const messagesResult = await safeSupabase
+        .from(TABLES.MESSAGES)
+        .select('*')
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
+
+      // Load user's own profile
+      const userResult = await safeSupabase
+        .from(TABLES.USERS)
+        .select('*')
+        .eq('id', userId)
+        .single();
 
       this.conversations = conversationsResult.data || [];
       this.messages = messagesResult.data || [];
       
       // Convert users array to Map for compatibility
       this.users = new Map();
-      if (usersResult.data) {
-        usersResult.data.forEach(user => {
-          if (user && user.id) {
-            this.users.set(user.id, user);
-          }
-        });
+      if (userResult.data) {
+        this.users.set(userResult.data.id, userResult.data);
       }
       
+      console.log('EnhancedUnifiedMessagingService: Loaded user data - Conversations:', this.conversations.length, 'Messages:', this.messages.length);
     } catch (error) {
-      console.error('EnhancedUnifiedMessagingService: Error loading data from Supabase:', error);
+      console.error('EnhancedUnifiedMessagingService: Error loading user data from Supabase:', error);
       this.conversations = [];
       this.messages = [];
       this.users = new Map();
     }
+  }
+
+  // Legacy method for backward compatibility - now just initializes empty data
+  async loadData() {
+    console.log('EnhancedUnifiedMessagingService: Initializing with empty data (user-specific data will be loaded after authentication)');
+    
+    // Initialize with empty arrays - user data will be loaded after authentication
+    this.conversations = [];
+    this.messages = [];
+    this.users = new Map();
   }
 
   async saveData() {
@@ -277,6 +313,13 @@ class EnhancedUnifiedMessagingService {
   }
 
   getConversationsByUser(userId) {
+    // Authentication guard
+    const authCheck = AuthGuard.requireAuth({ userId });
+    if (!authCheck.success) {
+      console.error('EnhancedUnifiedMessagingService: Authentication failed:', authCheck.error);
+      return [];
+    }
+
     return this.conversations.filter(conv => 
       conv.participants && conv.participants.includes(userId) && !conv.isArchived
     ).sort((a, b) => {
@@ -422,7 +465,24 @@ class EnhancedUnifiedMessagingService {
     }
   }
 
-  getMessagesByConversation(conversationId) {
+  getMessagesByConversation(conversationId, userId) {
+    // Authentication guard
+    const authCheck = AuthGuard.requireAuth({ userId });
+    if (!authCheck.success) {
+      console.error('EnhancedUnifiedMessagingService: Authentication failed:', authCheck.error);
+      return [];
+    }
+
+    // Check if user has access to this conversation
+    const conversation = this.getConversationById(conversationId);
+    if (conversation) {
+      const accessCheck = AuthGuard.requireMessageAccess(userId, conversation);
+      if (!accessCheck.success) {
+        console.error('EnhancedUnifiedMessagingService: Access denied:', accessCheck.error);
+        return [];
+      }
+    }
+
     return this.messages
       .filter(msg => msg.conversationId === conversationId && !msg.isDeleted)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // Oldest first

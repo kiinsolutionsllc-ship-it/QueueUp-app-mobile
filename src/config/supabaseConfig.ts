@@ -5,9 +5,14 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-projec
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 
 // Debug Supabase configuration
+console.log('=== SUPABASE CONFIGURATION DEBUG ===');
 console.log('Supabase URL:', supabaseUrl);
 console.log('Supabase Anon Key (first 20 chars):', supabaseAnonKey.substring(0, 20) + '...');
 console.log('Supabase Anon Key format valid:', supabaseAnonKey.startsWith('eyJ') || supabaseAnonKey.startsWith('sb_'));
+console.log('Environment variables loaded:', {
+  EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'
+});
 
 // Check if Supabase is properly configured
 const isSupabaseConfigured = supabaseUrl && supabaseAnonKey && 
@@ -26,6 +31,30 @@ export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabas
     detectSessionInUrl: false,
   },
 }) : null;
+
+// Test Supabase connection
+export const testSupabaseConnection = async () => {
+  if (!supabase) {
+    console.log('❌ Supabase client is null - not configured');
+    return false;
+  }
+  
+  try {
+    console.log('🔍 Testing Supabase connection...');
+    const { data, error } = await supabase.from('jobs').select('count').limit(1);
+    
+    if (error) {
+      console.log('❌ Supabase connection test failed:', error);
+      return false;
+    }
+    
+    console.log('✅ Supabase connection test successful');
+    return true;
+  } catch (err) {
+    console.log('❌ Supabase connection test error:', err);
+    return false;
+  }
+};
 
 // Safe Supabase operations that handle null client
 export const safeSupabase = {
@@ -127,7 +156,7 @@ export const TABLES = {
   USERS: 'users',
   JOBS: 'jobs',
   BIDS: 'bids',
-  MECHANICS: 'mechanics',
+  MECHANICS: 'mechanic_profiles',
   CUSTOMERS: 'customers',
   VEHICLES: 'vehicles',
   VEHICLE_SERVICES: 'vehicle_services',

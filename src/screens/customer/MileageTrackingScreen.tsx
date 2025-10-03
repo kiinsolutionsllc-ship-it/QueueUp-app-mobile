@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -84,7 +84,7 @@ export default function MileageTrackingScreen({ navigation }: MileageTrackingScr
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const handleMileageUpdate = async (vehicle) => {
+  const handleMileageUpdate = async (vehicle: any) => {
     try {
       await hapticService.buttonPress();
     } catch (error) {
@@ -122,7 +122,7 @@ export default function MileageTrackingScreen({ navigation }: MileageTrackingScr
     Alert.alert('Success', 'Mileage updated successfully');
   };
 
-  const getMileageStatus = (vehicle) => {
+  const getMileageStatus = (vehicle: any) => {
     const lastServiceMileage = vehicle.mileage - 5000; // Assuming 5000 miles since last service
     const milesSinceService = vehicle.mileage - lastServiceMileage;
     
@@ -135,11 +135,11 @@ export default function MileageTrackingScreen({ navigation }: MileageTrackingScr
     }
   };
 
-  const getVehicleHistory = (vehicleId) => {
-    return mileageHistory.filter(entry => entry.vehicleId === vehicleId);
+  const getVehicleHistory = (vehicleId: any) => {
+    return mileageHistory.filter((entry: any) => entry.vehicleId === vehicleId);
   };
 
-  const renderVehicleCard = (vehicle) => {
+  const renderVehicleCard = (vehicle: any) => {
     const mileageStatus = getMileageStatus(vehicle);
     const history = getVehicleHistory(vehicle.id);
     
@@ -212,7 +212,7 @@ export default function MileageTrackingScreen({ navigation }: MileageTrackingScr
             <Text style={[styles.historyTitle, { color: theme.text }]}>
               Recent History
             </Text>
-            {history.slice(0, 2).map((entry) => (
+            {history.slice(0, 2).map((entry: any) => (
               <View key={entry.id} style={styles.historyItem}>
                 <View style={styles.historyDate}>
                   <Text style={[styles.historyDateText, { color: theme.textSecondary }]}>

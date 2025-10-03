@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createContext, useContext, ReactNode } from 'react';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 // Light Theme Only - Simplified Theme interface
 export interface Theme {

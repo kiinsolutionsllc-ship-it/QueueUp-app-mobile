@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useChangeOrderWorkflow, ChangeOrder } from '../../contexts/ChangeOrderWorkflowContext';
 import IconFallback from '../../components/shared/IconFallback';
 import MaterialTextInput from '../../components/shared/MaterialTextInput';
@@ -385,7 +385,7 @@ const MechanicChangeOrderRequestScreen: React.FC<MechanicChangeOrderRequestScree
           <MaterialButton
             title="Cancel"
             onPress={handleCancel}
-            variant="outline"
+            variant="outlined"
             style={styles.cancelButton}
             icon="close"
           />

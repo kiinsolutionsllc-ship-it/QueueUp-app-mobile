@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, StatusBar, TextInput, Modal, SafeAreaView, Animated, Image,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // const { width, height } = Dimensions.get('window');

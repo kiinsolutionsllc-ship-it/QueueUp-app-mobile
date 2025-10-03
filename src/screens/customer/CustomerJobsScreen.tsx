@@ -14,7 +14,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useUnifiedMessaging } from '../../contexts/UnifiedMessagingContext';
@@ -40,7 +40,8 @@ interface CustomerJobsScreenProps {
 const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) => {
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
-  const { getJobsByCustomer, clearAllData, createJob, updateJob } = useJob();
+  const jobContext = useJob();
+  const { getJobsByCustomer, clearAllData, createJob, updateJob, jobs } = jobContext;
   const { vehicles } = useVehicle();
   const { findOrCreateConversation } = useUnifiedMessaging();
   const theme = getCurrentTheme();
@@ -68,6 +69,13 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
     return unsubscribe;
   }, [navigation]);
 
+  // Add effect to refresh when jobs context changes
+  useEffect(() => {
+    // This will trigger a re-render when the jobs context updates
+    console.log('CustomerJobsScreen - Jobs context updated, jobs count:', jobs.length);
+    console.log('CustomerJobsScreen - Customer jobs count:', customerJobs.length);
+  }, [jobs, customerJobs]);
+
   // Helper function to resolve vehicle data (handle both objects and IDs) - same as BidComparisonScreen
   const resolveVehicleData = (vehicle: any) => {
     if (!vehicle) return null;
@@ -90,10 +98,15 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
   };
 
   // Get customer jobs
-  const jobs = useMemo(() => {
+  const customerJobs = useMemo(() => {
     const customerId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
-    const customerJobs = getJobsByCustomer(customerId);
+    console.log('CustomerJobsScreen - Customer ID:', customerId);
+    console.log('CustomerJobsScreen - All jobs from context:', jobs.length);
+    console.log('CustomerJobsScreen - All jobs data:', jobs);
     
+    const customerJobs = getJobsByCustomer(customerId);
+    console.log('CustomerJobsScreen - Customer jobs from getJobsByCustomer:', customerJobs.length);
+    console.log('CustomerJobsScreen - Customer jobs data:', customerJobs);
     
     // Sort jobs by creation date (most recent first)
     return customerJobs.sort((a: any, b: any) => {
@@ -101,16 +114,20 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA; // Descending order (newest first)
     });
-  }, [user?.id, user?.user_type, getJobsByCustomer]);
+  }, [user?.id, user?.user_type, getJobsByCustomer, jobs]);
 
   // Filter jobs
   const filteredJobs = useMemo(() => {
+    console.log('CustomerJobsScreen - Filtering jobs. Filter:', filter, 'Customer jobs count:', customerJobs.length);
+    
     if (filter === 'all') {
       // Show all jobs except cancelled and completed ones
-      return jobs.filter((job: any) => job.status !== 'cancelled' && job.status !== 'completed');
+      const filtered = customerJobs.filter((job: any) => job.status !== 'cancelled' && job.status !== 'completed');
+      console.log('CustomerJobsScreen - All filter result:', filtered.length);
+      return filtered;
     }
     
-    return jobs.filter((job: any) => {
+    const filtered = customerJobs.filter((job: any) => {
       switch (filter) {
         case 'scheduled':
           return job.status === 'accepted' || job.status === 'scheduled';
@@ -122,7 +139,10 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
           return job.status === filter;
       }
     });
-  }, [jobs, filter]);
+    
+    console.log('CustomerJobsScreen - Filter result:', filtered.length);
+    return filtered;
+  }, [customerJobs, filter]);
 
   // Note: Vehicle data is now resolved using VehicleContext and resolveVehicleData function
   // This matches the approach used in BidComparisonScreen for consistency
@@ -131,8 +151,14 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
     setRefreshing(true);
     // Force a refresh by calling the job context refresh
     try {
-      // The jobs will be automatically updated through the useMemo dependency
+      console.log('CustomerJobsScreen - Refreshing data...');
+      // Call the context refresh method if available
+      if (jobContext?.refreshData) {
+        await jobContext.refreshData();
+      }
+      // Also force a small delay to ensure data is loaded
       await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('CustomerJobsScreen - Refresh completed');
     } catch (error) {
       console.error('CustomerJobsScreen - Refresh error:', error);
     }
@@ -705,7 +731,7 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
         onClose={() => setShowConversationModal(false)}
         conversation={selectedConversation}
         onMessageSent={handleMessageSent}
-        user={user}
+        user={user || undefined}
         theme={theme}
       />
 

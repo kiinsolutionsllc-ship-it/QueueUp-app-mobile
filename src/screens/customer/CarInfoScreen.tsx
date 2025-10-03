@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useVehicle } from '../../contexts/VehicleContext';
 import ModernHeader from '../../components/shared/ModernHeader';
 
@@ -1132,18 +1132,18 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   };
 
   // Get models by year and make (simplified - use existing carModels data)
-  const getModelsByYearAndMake = (year: any, make: any) => {
+  const getModelsByYearAndMake = (year: string | number, make: string) => {
     if (!year || !make) return [];
-    const modelsForMake = carModels[make] || [];
+    const modelsForMake = (carModels as any)[make] || [];
 
     // If we have year ranges per model, filter accordingly; otherwise return all
-    const availableForYear = modelsForMake.filter((model) => {
-      const makeYears = modelYears[make];
-      if (!makeYears || !makeYears[model]) return true;
-      return makeYears[model].includes(Number(year));
+    const availableForYear = modelsForMake.filter((model: string) => {
+      const makeYears = (modelYears as any)[make];
+      if (!makeYears || !(makeYears as any)[model]) return true;
+      return (makeYears as any)[model].includes(Number(year));
     });
 
-    return availableForYear.slice().sort((a, b) => a.localeCompare(b));
+    return availableForYear.slice().sort((a: string, b: string) => a.localeCompare(b));
   };
 
   // Model year ranges for each make/model combination (keeping for backward compatibility)
@@ -1265,8 +1265,8 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
 
   const goToNextStep = () => {
     if (canProceedToNext() && currentStep < 2) {
-      setCompletedSteps(prev => [...prev, currentStep]);
-      setCurrentStep(prev => prev + 1);
+      setCompletedSteps((prev: number[]) => [...prev, currentStep]);
+      setCurrentStep((prev: number) => prev + 1);
     } else if (currentStep === 2) {
       // Complete the vehicle addition
       handleSave();
@@ -1275,12 +1275,12 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
 
   const goToPreviousStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(prev => prev - 1);
+      setCurrentStep((prev: number) => prev - 1);
     }
   };
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev: Record<string, boolean>) => ({
       ...prev,
       [section]: !prev[section]
     }));
@@ -1311,7 +1311,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     });
   };
 
-  const editVehicle = (vehicle) => {
+  const editVehicle = (vehicle: any) => {
     setScreenMode('addVehicle');
     setCurrentStep(1);
     setCarInfo({
@@ -1335,7 +1335,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     });
   };
 
-  const handleDeleteVehicle = (vehicleId) => {
+  const handleDeleteVehicle = (vehicleId: string) => {
     Alert.alert(
       'Delete Vehicle',
       'Are you sure you want to delete this vehicle?',
@@ -1362,8 +1362,8 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     setCurrentStep(1);
   };
 
-  const handleInputChange = (field, value) => {
-    setCarInfo(prev => {
+  const handleInputChange = (field: string, value: string) => {
+    setCarInfo((prev: any) => {
       const newCarInfo = { ...prev, [field]: value };
       
       // If year is changed, clear all dependent fields
@@ -1412,7 +1412,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     });
   };
 
-  const openDropdownModal = (field, options, placeholder) => {
+  const openDropdownModal = (field: string, options: string[], placeholder: string) => {
     setCurrentField(field);
     
     // If it's the year field, show all available years
@@ -1518,14 +1518,14 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     setShowDropdownModal(true);
   };
 
-  const openTextInputModal = (field, placeholder) => {
+  const openTextInputModal = (field: string, placeholder: string) => {
     setCurrentField(field);
     setCurrentPlaceholder(placeholder);
     setInputValue(carInfo[field] || '');
     setShowTextInputModal(true);
   };
 
-  const handleDropdownSelection = (option) => {
+  const handleDropdownSelection = (option: string) => {
     // Don't allow selection of placeholder text
     if (option === 'Please select a make first' || 
         option === 'Please select make and model first' ||
@@ -1609,7 +1609,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     }
   };
 
-  const renderDropdown = (field, options, placeholder) => {
+  const renderDropdown = (field: string, options: string[], placeholder: string) => {
     let displayText = carInfo[field] || `Select ${placeholder}`;
     let isDisabled = false;
     
@@ -1684,7 +1684,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   );
   };
 
-  const renderTextInput = (field, placeholder, keyboardType = 'default') => (
+  const renderTextInput = (field: string, placeholder: string, keyboardType: string = 'default') => (
     <View style={styles.inputGroup}>
       <Text style={[styles.inputLabel, { color: theme.text }]}>
         {placeholder}
@@ -1829,7 +1829,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     return (
       <View style={styles.stepHeader}>
         <Text style={[styles.stepTitle, { color: theme.text }]}>
-          {stepTitles[currentStep]}
+          {(stepTitles as any)[currentStep]}
         </Text>
         <Text style={[styles.stepSubtitle, { color: theme.textSecondary }]}>
           {currentStep === 1 ? 'Basic information required' : 'Optional details to help with diagnostics'}
@@ -1842,7 +1842,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
     <View style={styles.stepContent}>
       <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
         <View style={styles.fieldRow}>
-          {renderDropdown('year', availableYears, 'Year')}
+          {renderDropdown('year', availableYears.map(String), 'Year')}
         </View>
         <View style={styles.fieldRow}>
           {renderDropdown('make', [], 'Make')}
@@ -2070,7 +2070,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
             </View>
             
             <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
-              {currentOptions.map((option, index) => (
+              {currentOptions.map((option: string, index: number) => (
                 <TouchableOpacity
                   key={index}
                   style={[

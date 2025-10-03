@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, StatusBar, TextInput, Modal, SafeAreaView, Animated, Image,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // const { width, height } = Dimensions.get('window');
@@ -154,12 +154,12 @@ export default function CustomerRegisterScreen({ navigation }: CustomerRegisterS
     try {
       const result = await resendConfirmationEmail(confirmationEmail);
       if (result.success) {
-        Alert.alert('Success', 'Confirmation email sent! Please check your inbox.');
+        Alert.alert('Success', 'Verification code sent! Please check your inbox.');
       } else {
-        Alert.alert('Error', result.error || 'Failed to resend confirmation email');
+        Alert.alert('Error', result.error || 'Failed to resend verification code');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend confirmation email');
+      Alert.alert('Error', 'Failed to resend verification code');
     }
   };
 
@@ -408,11 +408,11 @@ export default function CustomerRegisterScreen({ navigation }: CustomerRegisterS
               <MaterialIcons name="email" size={48} color="#EAB308" />
               <Text style={styles.confirmationTitle}>Check Your Email</Text>
               <Text style={styles.confirmationMessage}>
-                We've sent a confirmation link to:
+                We've sent a verification code to:
               </Text>
               <Text style={styles.confirmationEmail}>{confirmationEmail}</Text>
               <Text style={styles.confirmationInstructions}>
-                Please click the link in the email to verify your account and complete your registration.
+                Please enter the 6-digit verification code from your email to complete your registration.
               </Text>
               
               <View style={styles.confirmationButtons}>

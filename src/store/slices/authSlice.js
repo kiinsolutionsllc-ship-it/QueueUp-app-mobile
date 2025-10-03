@@ -1,63 +1,72 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { SupabaseAuthService } from '@/services/SupabaseAuthService';
 
-// Mock auth service - replace with actual API calls
+// Real Supabase auth service
 const authService = {
   login: async (credentials) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (credentials.email === 'customer@test.com' && credentials.password === 'SecurePass123!') {
-      return {
-        user: {
-          id: 'customer1',
-          email: 'customer@test.com',
-          name: 'John Customer',
-          type: 'customer',
-          avatar: '👤',
-        },
-        token: 'mock-jwt-token-customer',
-      };
+    try {
+      console.log('AuthSlice: Attempting login with Supabase...');
+      const result = await SupabaseAuthService.signIn(credentials.email, credentials.password);
+      
+      if (result.success && result.user) {
+        console.log('AuthSlice: Login successful');
+        return {
+          user: result.user,
+          token: result.session?.access_token,
+          session: result.session,
+        };
+      } else {
+        throw new Error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      console.error('AuthSlice: Login error:', error);
+      throw new Error(error.message || 'Login failed');
     }
-    
-    if (credentials.email === 'mechanic@test.com' && credentials.password === 'SecurePass123!') {
-      return {
-        user: {
-          id: 'mechanic1',
-          email: 'mechanic@test.com',
-          name: 'Mike Mechanic',
-          type: 'mechanic',
-          avatar: '🔧',
-          rating: 4.9,
-          specialties: ['Engine Repair', 'Brake Service', 'AC Repair'],
-        },
-        token: 'mock-jwt-token-mechanic',
-      };
-    }
-    
-    throw new Error('Invalid credentials');
   },
   
   register: async (userData) => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      user: {
-        id: `user_${Date.now()}`,
-        ...userData,
-        avatar: userData.type === 'mechanic' ? '🔧' : '👤',
-      },
-      token: `mock-jwt-token-${userData.type}`,
-    };
+    try {
+      console.log('AuthSlice: Attempting registration with Supabase...');
+      const result = await SupabaseAuthService.signUp(userData.email, userData.password, userData);
+      
+      if (result.success) {
+        console.log('AuthSlice: Registration successful');
+        return {
+          user: result.user,
+          requiresEmailConfirmation: result.requiresEmailConfirmation,
+          message: result.message,
+        };
+      } else {
+        throw new Error(result.error || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('AuthSlice: Registration error:', error);
+      throw new Error(error.message || 'Registration failed');
+    }
   },
   
   logout: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return true;
+    try {
+      console.log('AuthSlice: Attempting logout...');
+      await SupabaseAuthService.signOut();
+      console.log('AuthSlice: Logout successful');
+      return true;
+    } catch (error) {
+      console.error('AuthSlice: Logout error:', error);
+      throw new Error(error.message || 'Logout failed');
+    }
   },
   
-  refreshToken: async (token) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return `refreshed-${token}`;
+  refreshToken: async (session) => {
+    try {
+      console.log('AuthSlice: Attempting token refresh...');
+      // Supabase handles token refresh automatically
+      // Just return the current session token
+      return session?.access_token;
+    } catch (error) {
+      console.error('AuthSlice: Token refresh error:', error);
+      throw new Error(error.message || 'Token refresh failed');
+    }
   },
 };
 
@@ -100,9 +109,9 @@ export const logoutUser = createAsyncThunk(
 
 export const refreshUserToken = createAsyncThunk(
   'auth/refreshUserToken',
-  async (token, { rejectWithValue }) => {
+  async (session, { rejectWithValue }) => {
     try {
-      const newToken = await authService.refreshToken(token);
+      const newToken = await authService.refreshToken(session);
       return newToken;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -165,7 +174,13 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.lastLogin = new Date().toISOString();
-        state.sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+        // Use session expiry from Cognito if available, otherwise default to 24 hours
+        if (action.payload.session) {
+          const expiresAt = action.payload.session.getIdToken().getExpiration() * 1000;
+          state.sessionExpiry = new Date(expiresAt).toISOString();
+        } else {
+          state.sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        }
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -182,10 +197,15 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.isAuthenticated = true;
+        state.token = action.payload.token || null;
+        state.isAuthenticated = !!action.payload.token;
         state.lastLogin = new Date().toISOString();
-        state.sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        // Only set session expiry if user is authenticated (token exists)
+        if (action.payload.token) {
+          state.sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        } else {
+          state.sessionExpiry = null;
+        }
         state.error = null;
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -219,6 +239,7 @@ const authSlice = createSlice({
       .addCase(refreshUserToken.fulfilled, (state, action) => {
         state.loading = false;
         state.token = action.payload;
+        // Session expiry will be updated when the new session is used
         state.sessionExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       })
       .addCase(refreshUserToken.rejected, (state, action) => {

@@ -34,7 +34,8 @@ import LoadingScreen from './src/screens/shared/LoadingScreen';
 import UserTypeSelectionScreen from './src/screens/shared/UserTypeSelectionScreen';
 
 // Import context providers
-import { AuthProvider, useAuth } from './src/contexts/AuthContextAWS';
+import { AuthProvider, useAuth } from './src/contexts/AuthContextSupabase';
+import { PublicDataProvider } from './src/contexts/PublicDataContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { LocationProvider } from './src/contexts/LocationContext';
 import { LanguageProvider } from './src/contexts/LanguageContext';
@@ -146,6 +147,12 @@ function AppContent(): React.JSX.Element {
 
   useEffect(() => {
     if (!loading) {
+      // If user is authenticated, skip loading screen and go directly to their home
+      if (user) {
+        setShowLoading(false);
+        return;
+      }
+      
       // Show loading screen for 4 seconds, then show user type selection
       const timer = setTimeout(() => {
         setShowLoading(false);
@@ -154,7 +161,7 @@ function AppContent(): React.JSX.Element {
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [loading]);
+  }, [loading, user]);
 
   const handleUserTypeSelect = (type: 'customer' | 'mechanic') => {
     setSelectedUserType(type);
@@ -220,32 +227,33 @@ export default function App(): React.JSX.Element {
         <ReduxProvider store={store}>
           <QueryProvider>
             <LanguageProvider>
-              <AuthProvider>
-                <ThemeProvider>
-                  <AccessibilityProvider>
-                    <PaperProvider>
-                      <FeatureProvider>
-                        <EarningsDisplayProvider>
-                          <VehicleProvider>
-                            <SubscriptionProvider>
-                              <JobProvider>
-                                <ChangeOrderWorkflowProvider>
-                                  <UnifiedMessagingProvider>
-                                    <PaymentProvider>
-                                      <ReviewProvider>
-                                        <NotificationProvider>
-                                          <LocationProvider>
-                                            <QueueUpStripeProvider>
-                                              <AppContent />
-                                            </QueueUpStripeProvider>
-                                          </LocationProvider>
-                                        </NotificationProvider>
-                                      </ReviewProvider>
-                                    </PaymentProvider>
-                                  </UnifiedMessagingProvider>
-                                </ChangeOrderWorkflowProvider>
-                              </JobProvider>
-                            </SubscriptionProvider>
+              <PublicDataProvider>
+                <AuthProvider>
+                  <ThemeProvider>
+                    <AccessibilityProvider>
+                      <PaperProvider>
+                        <FeatureProvider>
+                          <EarningsDisplayProvider>
+                            <VehicleProvider>
+                              <SubscriptionProvider>
+                                <JobProvider>
+                                  <ChangeOrderWorkflowProvider>
+                                    <UnifiedMessagingProvider>
+                                      <PaymentProvider>
+                                        <ReviewProvider>
+                                          <NotificationProvider>
+                                            <LocationProvider>
+                                              <QueueUpStripeProvider>
+                                                <AppContent />
+                                              </QueueUpStripeProvider>
+                                            </LocationProvider>
+                                          </NotificationProvider>
+                                        </ReviewProvider>
+                                      </PaymentProvider>
+                                    </UnifiedMessagingProvider>
+                                  </ChangeOrderWorkflowProvider>
+                                </JobProvider>
+                              </SubscriptionProvider>
                           </VehicleProvider>
                         </EarningsDisplayProvider>
                       </FeatureProvider>
@@ -253,11 +261,12 @@ export default function App(): React.JSX.Element {
                   </AccessibilityProvider>
                 </ThemeProvider>
               </AuthProvider>
-            </LanguageProvider>
-          </QueryProvider>
-        </ReduxProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
-  );
+            </PublicDataProvider>
+          </LanguageProvider>
+        </QueryProvider>
+      </ReduxProvider>
+    </SafeAreaProvider>
+  </ErrorBoundary>
+);
 }
 

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useStepManagement } from '../../hooks/useStepManagement';
 import { useCreateJobOptimizations } from '../../hooks/useCreateJobOptimizations';
@@ -268,13 +268,10 @@ const CreateJobScreen: React.FC<CreateJobScreenProps> = ({ navigation }) => {
 
   // Handle location selection
   const handleLocationSelect = useCallback(() => {
-    // Navigate to location picker or show location modal
-    navigation.navigate('LocationPicker', {
-      onLocationSelect: (location: string) => {
-        handleFormDataChange('location', location);
-      },
-    });
-  }, [navigation, handleFormDataChange]);
+    // Location input is now built into VehicleServiceStep with Google Maps autocomplete
+    // No need to navigate to a separate screen
+    console.log('Location selection handled by built-in location input');
+  }, []);
 
   // Handle vehicle selection
   const handleVehicleSelect = useCallback((vehicle: string) => {
@@ -713,7 +710,7 @@ const CreateJobScreen: React.FC<CreateJobScreenProps> = ({ navigation }) => {
         theme={theme as any}
         category={formData.category || ''}
         subcategories={getSubcategoriesForCategory(formData.category)}
-        selectedSubcategory={formData.subcategory}
+        selectedSubcategory={formData.subcategory || undefined}
         onSubcategorySelect={(subcategory) => {
           handleFormDataChange('subcategory', subcategory.id || '');
           handleFormDataChange('estimatedCost', subcategory.price);

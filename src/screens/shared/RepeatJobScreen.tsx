@@ -12,7 +12,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ValidatedForm from '../../components/shared/ValidatedForm';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -45,7 +45,7 @@ export default function RepeatJobScreen({ navigation, route }: RepeatJobScreenPr
     modifications: [{ validator: 'maxLength', message: 'Modifications must be less than 500 characters' }],
   };
 
-  const handleRepeatJob = async (values) => {
+  const handleRepeatJob = async (values: any) => {
     if (!selectedDate || !selectedTime) {
       Alert.alert('Selection Required', 'Please select both date and time for the repeated service');
       return;
@@ -91,7 +91,7 @@ export default function RepeatJobScreen({ navigation, route }: RepeatJobScreenPr
     }
   };
 
-  const formatDate = (date) => {
+  const formatDate = (date: any) => {
     return new Date(date).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -100,7 +100,7 @@ export default function RepeatJobScreen({ navigation, route }: RepeatJobScreenPr
     });
   };
 
-  const isDateAvailable = (date) => {
+  const isDateAvailable = (date: any) => {
     // In a real app, you would check mechanic availability
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -225,7 +225,7 @@ export default function RepeatJobScreen({ navigation, route }: RepeatJobScreenPr
             submitButtonText="Repeat Job"
             submitButtonVariant="filled"
           >
-            {({ MaterialTextInput }) => (
+            {({ MaterialTextInput }: any) => (
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Service Modifications

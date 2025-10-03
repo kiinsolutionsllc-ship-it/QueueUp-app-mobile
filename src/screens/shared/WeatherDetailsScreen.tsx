@@ -44,7 +44,7 @@ export default function WeatherDetailsScreen({ navigation }: WeatherDetailsScree
     ],
   };
 
-  const getWeatherIcon = (condition) => {
+  const getWeatherIcon = (condition: any) => {
     switch (condition) {
       case 'sunny': return 'wb-sunny';
       case 'partly-cloudy': return 'partly-cloudy-day';
@@ -55,7 +55,7 @@ export default function WeatherDetailsScreen({ navigation }: WeatherDetailsScree
     }
   };
 
-  const getWeatherColor = (condition) => {
+  const getWeatherColor = (condition: any) => {
     switch (condition) {
       case 'sunny': return theme.warning;
       case 'partly-cloudy': return theme.textSecondary;

@@ -1,10 +1,56 @@
 import { PaymentData, PaymentResult } from '../types/JobTypes';
-import { mockStripeService, MOCK_TEST_DATA } from './MockStripeService';
-import { mockServiceManager } from './MockServiceManager';
 import { MOCK_MODE } from '../config/payment';
-import { supabase } from '../config/supabase';
+import { supabase } from '../config/supabaseConfig';
 import CommissionService from './CommissionService';
 import { paypalService } from './PayPalService';
+
+// Test data for development/testing (remove for production)
+const TEST_DATA = {
+  SUCCESS: {
+    amount: 5000, // $50.00 in cents
+    paymentMethodId: 'pm_test_success',
+    customerId: 'cus_test_success',
+  },
+  CARD_DECLINED: {
+    amount: 5000,
+    paymentMethodId: 'pm_test_declined',
+    customerId: 'cus_test_declined',
+  },
+  REQUIRES_ACTION: {
+    amount: 5000,
+    paymentMethodId: 'pm_test_requires_action',
+    customerId: 'cus_test_requires_action',
+  },
+  PROCESSING_ERROR: {
+    amount: 5000,
+    paymentMethodId: 'pm_test_error',
+    customerId: 'cus_test_error',
+  },
+};
+
+// Real Stripe service implementation (for production)
+const stripeService = {
+  createCustomer: async (data: any): Promise<{ id: string; email: string; name: string }> => {
+    // TODO: Implement real Stripe customer creation
+    throw new Error('Stripe customer creation not implemented');
+  },
+  createPaymentIntent: async (data: any): Promise<{ id: string; amount: number; currency: string; status: string }> => {
+    // TODO: Implement real Stripe payment intent creation
+    throw new Error('Stripe payment intent creation not implemented');
+  },
+  confirmPaymentIntent: async (paymentIntentId: string, paymentMethodId: string): Promise<{ id: string; status: string; payment_method: string }> => {
+    // TODO: Implement real Stripe payment intent confirmation
+    throw new Error('Stripe payment intent confirmation not implemented');
+  },
+  createPaymentMethod: async (data: any): Promise<{ id: string; type: string; card?: any }> => {
+    // TODO: Implement real Stripe payment method creation
+    throw new Error('Stripe payment method creation not implemented');
+  },
+  attachPaymentMethod: async (paymentMethodId: string, customerId: string): Promise<{ id: string; customer: string }> => {
+    // TODO: Implement real Stripe payment method attachment
+    throw new Error('Stripe payment method attachment not implemented');
+  },
+};
 
 export interface PaymentServiceConfig {
   useMockService?: boolean;
@@ -104,7 +150,7 @@ export class PaymentServiceNew {
     // Create customer if needed
     let customerId = paymentData.customerId;
     if (!customerId) {
-      const customer = await mockStripeService.createCustomer({
+      const customer = await stripeService.createCustomer({
         email: paymentData.metadata?.customerEmail || 'test@example.com',
         name: paymentData.metadata?.customerName || 'Test Customer',
         phone: paymentData.metadata?.customerPhone || '+1234567890',
@@ -113,24 +159,25 @@ export class PaymentServiceNew {
     }
 
     // Create payment intent
-    const paymentIntent = await mockStripeService.createPaymentIntent({
+    const paymentIntent = await stripeService.createPaymentIntent({
       amount: Math.round(paymentData.amount * 100), // Convert to cents
       currency: paymentData.currency.toLowerCase(),
-      customerId,
-      paymentMethodId: paymentData.paymentMethodId,
+      customerId: customerId || undefined,
+      paymentMethodId: paymentData.paymentMethodId || undefined,
       metadata: paymentData.metadata,
     });
 
     // Confirm payment intent
-    const result = await mockStripeService.confirmPaymentIntent(
-      paymentIntent.id,
-      paymentData.paymentMethodId
+    const result = await stripeService.confirmPaymentIntent(
+      paymentIntent.id || '',
+      paymentData.paymentMethodId || ''
     );
 
     return {
+      success: result.status === 'succeeded',
       ...result,
-      customerId,
-      paymentIntentId: paymentIntent.id,
+      customerId: customerId || undefined,
+      paymentIntentId: paymentIntent.id || undefined,
     };
   }
 
@@ -568,7 +615,7 @@ export class PaymentServiceNew {
     billing_details?: any;
   }): Promise<any> {
     if (this.useMock) {
-      return await mockStripeService.createPaymentMethod(methodData);
+      return await stripeService.createPaymentMethod(methodData);
     } else {
       // TODO: Implement real Stripe payment method creation
       throw new Error('Real Stripe payment method creation not implemented yet');
@@ -612,7 +659,7 @@ export class PaymentServiceNew {
   // Save payment method
   async savePaymentMethod(customerId: string, paymentMethodId: string): Promise<any> {
     if (this.useMock) {
-      await mockStripeService.attachPaymentMethod(paymentMethodId, customerId);
+      await stripeService.attachPaymentMethod(paymentMethodId, customerId);
       return { success: true, paymentMethodId };
     } else {
       // TODO: Implement real Stripe payment method saving
@@ -1239,10 +1286,10 @@ export class PaymentServiceNew {
   // ==================== TESTING & UTILITIES ====================
 
   // Test different payment scenarios
-  async testPaymentScenario(scenario: keyof typeof MOCK_TEST_DATA): Promise<PaymentResult> {
-    console.log(`PaymentServiceNew - Testing payment scenario: ${scenario}`);
+  async testPaymentScenario(scenario: keyof typeof TEST_DATA): Promise<PaymentResult> {
+    console.log(`PaymentServiceNew - Testing payment scenario: ${String(scenario)}`);
     
-    const testData = MOCK_TEST_DATA[scenario];
+    const testData = TEST_DATA[scenario];
     const paymentData: PaymentData = {
       amount: testData.amount / 100, // Convert from cents to dollars
       currency: 'USD',
@@ -1265,7 +1312,7 @@ export class PaymentServiceNew {
     metadata?: Record<string, any>;
   }): Promise<any> {
     if (this.useMock) {
-      return await mockStripeService.createPaymentIntent({
+      return await stripeService.createPaymentIntent({
         amount: Math.round(data.amount * 100), // Convert to cents
         currency: data.currency.toLowerCase(),
         customerId: data.customer,
@@ -1296,7 +1343,7 @@ export const paymentServiceNew = PaymentServiceNew.getInstance();
 export const testPaymentScenarios = async () => {
   console.log('Testing all payment scenarios...');
   
-  const scenarios: (keyof typeof MOCK_TEST_DATA)[] = [
+  const scenarios: (keyof typeof TEST_DATA)[] = [
     'SUCCESS',
     'CARD_DECLINED', 
     'REQUIRES_ACTION',
@@ -1308,7 +1355,7 @@ export const testPaymentScenarios = async () => {
       const result = await paymentServiceNew.testPaymentScenario(scenario);
       console.log(`Scenario ${scenario}:`, result);
     } catch (error) {
-      console.error(`Scenario ${scenario} failed:`, error);
+      console.error(`Scenario ${String(scenario)} failed:`, error);
     }
   }
 };

@@ -18,7 +18,7 @@ import * as Notifications from 'expo-notifications';
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -164,7 +164,7 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
           <View style={styles.conversationNameRow}>
             <View style={styles.nameAndJobRow}>
               <Text style={[styles.conversationName, { color: theme.text }]}>
-                {capitalizeText(conversation.title)}
+                {capitalizeText(conversation.title || '')}
               </Text>
               {conversation.metadata?.jobTitle && (
                 <>
@@ -285,7 +285,7 @@ const UnifiedMessagingScreen: React.FC<UnifiedMessagingScreenProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ModernHeader
-        title={selectedConversation?.title ? capitalizeText(selectedConversation.title) : 'Chat'}
+        title={selectedConversation?.title ? capitalizeText(selectedConversation.title || '') : 'Chat'}
         showBack={true}
         onBackPress={handleBackToConversations}
         onNotificationPress={handleNotifications}
@@ -586,7 +586,7 @@ const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (
         onClose={() => setShowConversationModal(false)}
         conversation={selectedConversation}
         onMessageSent={handleMessageSent}
-        user={user}
+        user={user || undefined}
         theme={theme}
       />
     </>

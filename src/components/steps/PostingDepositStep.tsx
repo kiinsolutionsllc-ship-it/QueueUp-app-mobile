@@ -578,7 +578,7 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
         return {
           success: true,
           transactionId: paymentIntent.id,
-          paymentMethod: paymentData.paymentMethodId,
+          paymentMethod: paymentData.paymentMethodId || undefined,
         };
       } else {
         return {

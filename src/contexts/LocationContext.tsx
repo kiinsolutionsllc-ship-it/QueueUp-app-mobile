@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 // AsyncStorage removed - using Supabase only
 import { SavedLocation } from '../types/UserTypes';
-import { useAuth } from './AuthContextAWS';
+import { useAuth } from './AuthContextSupabase';
 
 interface LocationContextType {
   homeAddress: SavedLocation | null;

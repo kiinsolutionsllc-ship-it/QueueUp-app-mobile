@@ -16,7 +16,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { usePayment } from '../../contexts/PaymentContext';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useReview } from '../../contexts/ReviewContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { formatJobCost } from '../../utils/JobCostUtils';
 import NotificationService from '../../services/NotificationService';
 import ModernHeader from '../../components/shared/ModernHeader';

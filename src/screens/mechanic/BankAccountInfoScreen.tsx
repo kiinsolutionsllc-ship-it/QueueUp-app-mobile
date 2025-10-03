@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -213,7 +213,7 @@ export default function BankAccountInfoScreen({ navigation }: BankAccountInfoScr
     );
   };
 
-  const maskAccountNumber = (number) => {
+  const maskAccountNumber = (number: any) => {
     if (!number) return '';
     if (number.length <= 4) return number;
     return '*'.repeat(number.length - 4) + number.slice(-4);

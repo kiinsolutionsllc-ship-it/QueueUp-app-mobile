@@ -16,7 +16,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import { formatJobCost, calculateTotalJobCost } from '../../utils/JobCostUtils';
@@ -430,7 +430,7 @@ const MechanicDashboard: React.FC<MechanicDashboardProps> = ({ navigation }) => 
             feature={selectedFeature}
             requiredTier="premium"
             description={`This feature is available in the ${selectedFeature} plan.`}
-            onUpgrade={() => setShowFeaturePreview(false)}
+            onUpgrade={undefined}
           >
             <Text style={{ color: theme.text }}>Feature Preview</Text>
           </FeaturePreview>

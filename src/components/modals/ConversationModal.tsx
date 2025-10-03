@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 // AsyncStorage removed - using Supabase only
 import * as Notifications from 'expo-notifications';
 import { ConversationModalProps, Message } from '../../types/MessagingTypes';
-import { User } from '../../contexts/AuthContextAWS';
+import { User } from '../../contexts/AuthContextSupabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
 import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';

@@ -15,7 +15,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSupport } from '../../contexts/SupportContext';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -379,8 +379,8 @@ export default function UnifiedSupportScreen({ navigation }: UnifiedSupportScree
       // Create support ticket using context
       const newTicket = await createTicket({
         userId: user.id,
-        title: issueDescription,
-        description: customIssue.trim() || issueDescription,
+        title: issueDescription || '',
+        description: customIssue?.trim() || issueDescription || '',
         category: issue,
         priority: priority as any,
         status: 'open',

@@ -10,7 +10,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 
 /**
  * SUBSCRIPTION ANALYTICS COMPONENT

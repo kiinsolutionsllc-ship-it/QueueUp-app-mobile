@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
 import IconFallback from '../../components/shared/IconFallback';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -445,7 +445,7 @@ const ChangeOrderApprovalScreen = ({ navigation, route }: { navigation: any, rou
           <MaterialButton
             title="Reject"
             onPress={handleReject}
-            variant="outline"
+            variant="outlined"
             loading={processing}
             disabled={processing}
             style={[styles.actionButton, { borderColor: theme.error }]}

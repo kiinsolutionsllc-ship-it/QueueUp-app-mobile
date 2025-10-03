@@ -12,12 +12,12 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import IconFallback from '../../components/shared/IconFallback';
 import { FadeIn } from '../../components/shared/Animations';
 import { hapticService } from '../../services/HapticService';
 
-const DisputeResolutionScreen = ({ navigation, route }) => {
+const DisputeResolutionScreen = ({ navigation, route }: any) => {
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
   const theme = getCurrentTheme();
@@ -102,7 +102,7 @@ const DisputeResolutionScreen = ({ navigation, route }) => {
     }
   };
 
-  const renderDisputeTypeCard = (type) => {
+  const renderDisputeTypeCard = (type: any) => {
     const isSelected = disputeType === type.id;
     
     return (

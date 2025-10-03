@@ -13,7 +13,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useFeatureContext } from '../../contexts/FeatureContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useNotificationCount } from '../../hooks/useNotificationCount';
@@ -127,7 +127,7 @@ export default function VehicleDashboardScreen({ navigation }: VehicleDashboardS
     }
   };
 
-  const handleVehiclePress = async (vehicle) => {
+  const handleVehiclePress = async (vehicle: any) => {
     try {
       navigation.navigate('CarInfo', { vehicleId: vehicle.id });
     } catch (error) {
@@ -136,7 +136,7 @@ export default function VehicleDashboardScreen({ navigation }: VehicleDashboardS
     }
   };
 
-  const handleQuickAction = async (action) => {
+  const handleQuickAction = async (action: any) => {
     try {
       await hapticService.buttonPress();
       
@@ -203,7 +203,7 @@ export default function VehicleDashboardScreen({ navigation }: VehicleDashboardS
     }
   };
 
-  const handleViewAll = async (type) => {
+  const handleViewAll = async (type: any) => {
     try {
       await hapticService.buttonPress();
       
@@ -288,10 +288,10 @@ export default function VehicleDashboardScreen({ navigation }: VehicleDashboardS
               activeOpacity={0.7}
             >
               <IconFallback name="notifications" size={24} color={theme.text} />
-              {(unreadCount > 0 || recallAlerts.filter(alert => alert.actionRequired).length > 0) && (
+              {(unreadCount > 0 || recallAlerts.filter((alert: any) => alert.actionRequired).length > 0) && (
                 <View style={[styles.badge, { backgroundColor: theme.error }]}>
                   <Text style={[styles.badgeText, { color: 'white' }]}>
-                    {unreadCount + recallAlerts.filter(alert => alert.actionRequired).length}
+                    {unreadCount + recallAlerts.filter((alert: any) => alert.actionRequired).length}
                   </Text>
                 </View>
               )}

@@ -16,15 +16,16 @@ import {
 import * as Haptics from 'expo-haptics';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContextAWS';
+import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
 import BidSubmissionModal from '../../components/shared/BidSubmissionModal';
-// Supabase integration disabled - no mock data
-// import backendService from '../../services/BackendService';
+import { safeSupabase, TABLES } from '../../config/supabaseConfig';
 import BiddingService from '../../services/BiddingService';
 import FavoritesService from '../../services/FavoritesService';
+import { useLoadingState, withLoading, LOADING_TYPES } from '../../utils/LoadingStateManager';
+import { handleError, ERROR_TYPES } from '../../utils/ErrorHandler';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,6 +42,9 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   
   const { mechanic, mechanicId } = route.params;
   
+  // Enhanced loading state management
+  const { isLoading, startLoading, stopLoading, message: loadingMessage } = useLoadingState();
+  
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -53,7 +57,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   // Real data state
   const [realMechanicData, setRealMechanicData] = useState<any>(null);
   const [realReviews, setRealReviews] = useState<any>([]);
-  const [isLoading, setIsLoading] = useState<any>(true);
+  const [dataLoading, setDataLoading] = useState<any>(true);
   const [error, setError] = useState<any>(null);
   
   // Bidding state
@@ -132,43 +136,68 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
     ]
   };
 
-  // Fetch real mechanic data (DISABLED - using mock data only)
+  // Fetch real mechanic data from Supabase with enhanced error handling
   const fetchMechanicData = async () => {
+    if (!mechanicId) {
+      setDataLoading(false);
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Supabase integration disabled - using mock data only
-      
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Set loading to false to show mock data
-      setIsLoading(false);
-      
-      // Uncomment below to re-enable Supabase integration:
-      /*
-      // Try to fetch real data from backend
-      if (mechanicId) {
+      await withLoading(async () => {
+        setDataLoading(true);
+        setError(null);
+
+        // Fetch mechanic profile from Supabase
+        const mechanicQuery = safeSupabase
+          .from(TABLES.MECHANICS)
+          .select('*')
+          .eq('id', mechanicId);
         
-        // Fetch mechanic profile
-        const mechanicResult = await backendService.getUser(mechanicId);
-        if (mechanicResult.data && !mechanicResult.error) {
-          setRealMechanicData(mechanicResult.data);
+        const { data: mechanicData, error: mechanicError } = await (mechanicQuery as any).single();
+
+        if (mechanicError) {
+          throw new Error(`Failed to fetch mechanic data: ${mechanicError.message}`);
         }
+
+        if (mechanicData) {
+          setRealMechanicData(mechanicData);
+        }
+
+        // Fetch reviews from Supabase
+        const reviewsQuery = safeSupabase
+          .from(TABLES.REVIEWS)
+          .select('*')
+          .eq('mechanic_id', mechanicId);
         
-        // Fetch reviews
-        const reviewsResult = await backendService.getReviews(mechanicId);
-        if (reviewsResult.data && !reviewsResult.error) {
-          setRealReviews(reviewsResult.data);
+        const { data: reviewsData, error: reviewsError } = await (reviewsQuery as any).order('created_at', { ascending: false });
+
+        if (reviewsError) {
+          console.warn('Error fetching reviews:', reviewsError);
+          // Don't throw error for reviews - it's not critical
+        } else if (reviewsData) {
+          setRealReviews(reviewsData);
         }
-      }
-      */
+      }, {
+        operationId: 'fetch-mechanic-data',
+        type: LOADING_TYPES.INITIAL,
+        message: 'Loading mechanic profile...',
+        timeout: 15000
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      // Fall back to mock data - no need to set error state as we have fallbacks
+      const errorInfo = handleError(err, {
+        component: 'MechanicProfileScreen',
+        operation: 'fetchMechanicData',
+        mechanicId
+      }, {
+        showAlert: true,
+        showRetry: true,
+        onRetry: fetchMechanicData
+      });
+      
+      setError(errorInfo.userMessage);
     } finally {
-      setIsLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -226,7 +255,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   const getReviewsData = () => {
     // Use real reviews if available, otherwise fall back to mock data
     if (realReviews && realReviews.length > 0) {
-      return realReviews.map(review => ({
+      return realReviews.map((review: any) => ({
         id: review.id,
         customerName: review.customer_name || 'Anonymous',
         rating: review.rating || 5,
@@ -335,7 +364,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   };
 
   // Handle submit bid
-  const handleSubmitBid = async (bidData) => {
+  const handleSubmitBid = async (bidData: any) => {
     try {
       setSubmittingBid(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -367,7 +396,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   };
 
   // Render stars
-  const renderStars = (rating) => {
+  const renderStars = (rating: any) => {
     return (
       <View style={styles.starsContainer}>
         {[1, 2, 3, 4, 5].map((star) => (
@@ -384,7 +413,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
 
   // Render specialty tags
   const renderSpecialties = () => {
-    return (currentMechanic?.specialties || []).map((specialty, index) => (
+    return (currentMechanic?.specialties || []).map((specialty: any, index: any) => (
       <View key={index} style={[styles.specialtyTag, { backgroundColor: theme.surface }]}>
         <Text style={[styles.specialtyText, { color: theme.textSecondary }]}>
           {specialty}
@@ -397,7 +426,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   const renderAmenities = () => {
     if (currentMechanic?.mechanicType !== 'shops' || !currentMechanic?.amenities) return null;
     
-    return currentMechanic.amenities.map((amenity, index) => (
+    return currentMechanic.amenities.map((amenity: any, index: any) => (
       <View key={index} style={[styles.amenityItem, { backgroundColor: theme.surface }]}>
         <IconFallback name="check" size={16} color={theme.success} />
         <Text style={[styles.amenityText, { color: theme.text }]}>
@@ -411,7 +440,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   const renderCertifications = () => {
     if (!currentMechanic?.certifications) return null;
     
-    return currentMechanic.certifications.map((cert, index) => (
+    return currentMechanic.certifications.map((cert: any, index: any) => (
       <View key={index} style={[styles.certificationItem, { backgroundColor: theme.surface }]}>
         <IconFallback name="verified" size={16} color={theme.accentLight} />
         <Text style={[styles.certificationText, { color: theme.text }]}>
@@ -422,7 +451,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   };
 
   // Render individual review
-  const renderReview = (review) => {
+  const renderReview = (review: any) => {
     return (
       <View key={review.id} style={[styles.reviewCard, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
         <View style={styles.reviewHeader}>
@@ -543,7 +572,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
   };
 
   // Show loading state
-  if (isLoading) {
+  if (dataLoading || isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         <ModernHeader
@@ -554,7 +583,7 @@ export default function MechanicProfileScreen({ navigation, route }: MechanicPro
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accentLight} />
           <Text style={[styles.loadingText, { color: theme.text }]}>
-            Loading mechanic profile...
+            {loadingMessage || 'Loading mechanic profile...'}
           </Text>
         </View>
       </View>
