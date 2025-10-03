@@ -1,0 +1,58 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="#F97316" stroke="#EA580C" stroke-width="8"/>
+  
+  <!-- Inner Circle -->
+  <circle cx="256" cy="256" r="200" fill="#FFFFFF" opacity="0.1"/>
+  
+  <!-- Wrench Icon -->
+  <g transform="translate(256, 256)">
+    <!-- Wrench Handle -->
+    <rect x="-80" y="-8" width="120" height="16" rx="8" fill="#FFFFFF"/>
+    
+    <!-- Wrench Head -->
+    <rect x="40" y="-20" width="24" height="40" rx="4" fill="#FFFFFF"/>
+    
+    <!-- Wrench Opening -->
+    <rect x="44" y="-16" width="16" height="32" rx="2" fill="#F97316"/>
+  </g>
+  
+  <!-- Car Icon -->
+  <g transform="translate(256, 200)">
+    <!-- Car Body -->
+    <rect x="-60" y="-20" width="120" height="40" rx="20" fill="#FFFFFF"/>
+    
+    <!-- Car Windows -->
+    <rect x="-50" y="-15" width="100" height="30" rx="15" fill="#F97316" opacity="0.3"/>
+    
+    <!-- Wheels -->
+    <circle cx="-40" cy="25" r="12" fill="#1F2937"/>
+    <circle cx="40" cy="25" r="12" fill="#1F2937"/>
+    
+    <!-- Wheel Centers -->
+    <circle cx="-40" cy="25" r="6" fill="#FFFFFF"/>
+    <circle cx="40" cy="25" r="6" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- Gear Icon -->
+  <g transform="translate(256, 320)">
+    <!-- Outer Gear -->
+    <circle cx="0" cy="0" r="30" fill="#FFFFFF"/>
+    <circle cx="0" cy="0" r="20" fill="#F97316"/>
+    
+    <!-- Gear Teeth -->
+    <rect x="-35" y="-3" width="10" height="6" fill="#FFFFFF"/>
+    <rect x="25" y="-3" width="10" height="6" fill="#FFFFFF"/>
+    <rect x="-3" y="-35" width="6" height="10" fill="#FFFFFF"/>
+    <rect x="-3" y="25" width="6" height="10" fill="#FFFFFF"/>
+    
+    <!-- Center Hole -->
+    <circle cx="0" cy="0" r="8" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- App Name -->
+  <text x="256" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#FFFFFF">QUEUED</text>
+  
+  <!-- Tagline -->
+  <text x="256" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#FFFFFF" opacity="0.9">Auto Repair Services</text>
+</svg>

@@ -1,0 +1,65 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient for 3D effect on gear -->
+    <radialGradient id="gearGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#FFA500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Gradient for 3D effect on wrench -->
+    <linearGradient id="wrenchGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8C00;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF4500;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DC143C;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- Black rounded square background -->
+  <rect x="64" y="64" width="384" height="384" rx="48" ry="48" fill="#000000"/>
+  
+  <!-- Gear (Yellow) -->
+  <g transform="translate(256, 256)">
+    <!-- Gear teeth -->
+    <g fill="url(#gearGradient)" filter="url(#shadow)">
+      <!-- Top tooth -->
+      <rect x="-8" y="-120" width="16" height="40" rx="8"/>
+      <!-- Bottom tooth -->
+      <rect x="-8" y="80" width="16" height="40" rx="8"/>
+      <!-- Left tooth -->
+      <rect x="-120" y="-8" width="40" height="16" rx="8"/>
+      <!-- Right tooth -->
+      <rect x="80" y="-8" width="40" height="16" rx="8"/>
+      <!-- Diagonal teeth -->
+      <rect x="-85" y="-85" width="16" height="40" rx="8" transform="rotate(45)"/>
+      <rect x="69" y="-85" width="16" height="40" rx="8" transform="rotate(-45)"/>
+      <rect x="-85" y="69" width="16" height="40" rx="8" transform="rotate(-45)"/>
+      <rect x="69" y="69" width="16" height="40" rx="8" transform="rotate(45)"/>
+    </g>
+    
+    <!-- Gear center circle -->
+    <circle cx="0" cy="0" r="60" fill="url(#gearGradient)" filter="url(#shadow)"/>
+    <circle cx="0" cy="0" r="40" fill="#000000"/>
+  </g>
+  
+  <!-- Wrench (Orange) -->
+  <g transform="translate(256, 256) rotate(45)">
+    <g fill="url(#wrenchGradient)" filter="url(#shadow)">
+      <!-- Wrench head (open end) -->
+      <path d="M -60 -20 L -40 -20 L -40 -10 L -30 -10 L -30 10 L -40 10 L -40 20 L -60 20 L -60 15 L -50 15 L -50 -15 L -60 -15 Z"/>
+      
+      <!-- Wrench handle -->
+      <rect x="-20" y="-8" width="120" height="16" rx="8"/>
+      
+      <!-- Wrench handle end -->
+      <circle cx="100" cy="0" r="12"/>
+    </g>
+  </g>
+</svg>
+
+

@@ -1,0 +1,141 @@
+// App Configuration for QueueUp
+// Updated for free deployment setup
+
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+const getAppName = () => {
+  return 'QueueUp';
+};
+
+const getBundleIdentifier = () => {
+  return 'com.queueup.app';
+};
+
+export default {
+  expo: {
+    name: getAppName(),
+    slug: 'queueup',
+    version: '5.0.0',
+    main: 'index.js',
+    assetBundlePatterns: [
+      '**/*'
+    ],
+    // Development build configuration
+    plugins: [
+      'expo-dev-client',
+      'expo-font',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/notification-icon.png',
+          color: '#ffffff',
+          defaultChannel: 'default'
+        }
+      ],
+      [
+        'expo-location',
+        {
+          locationAlwaysAndWhenInUsePermission: 'This app needs access to location to find nearby mechanics and provide location-based services.'
+        }
+      ],
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'The app accesses your photos to let you share them with mechanics.'
+        }
+      ],
+      [
+        'expo-camera',
+        {
+          cameraPermission: 'The app accesses your camera to let you take photos of your vehicle issues.'
+        }
+      ]
+    ],
+    web: {
+      favicon: './assets/Logo.jpg',
+      bundler: 'metro',
+      // Optimize for web deployment
+      build: {
+        babel: {
+          include: [
+            '@react-native',
+            'react-native',
+            'react-native-web',
+            'react-native-svg',
+            'react-native-vector-icons',
+            'react-native-paper',
+            'react-native-elements',
+            'react-native-gifted-chat',
+            'react-native-maps',
+            'react-native-calendars',
+            'react-native-chart-kit',
+            'react-native-ratings',
+            'react-native-super-grid',
+            'react-native-image-viewing',
+            'react-native-modal',
+            'react-native-credit-card-input',
+            'react-native-device-info',
+            'react-native-keychain',
+            'react-native-permissions',
+            'react-native-tts',
+            'react-native-voice',
+            'react-native-worklets',
+            'react-native-worklets-core',
+            'victory-native',
+            '@shopify/react-native-skia',
+            '@stripe/stripe-react-native',
+            '@supabase/supabase-js',
+            '@tanstack/react-query',
+            '@reduxjs/toolkit',
+            'redux-persist',
+            'react-redux',
+            'crypto-js',
+            'ws'
+          ]
+        }
+      }
+    },
+    extra: {
+      eas: {
+        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || '00000000-0000-0000-0000-000000000000'
+      },
+      // AWS Cognito configuration
+      aws: {
+        region: process.env.EXPO_PUBLIC_AWS_REGION,
+        userPoolId: process.env.EXPO_PUBLIC_AWS_USER_POOL_ID,
+        userPoolClientId: process.env.EXPO_PUBLIC_AWS_USER_POOL_WEB_CLIENT_ID,
+        cognitoDomain: process.env.EXPO_PUBLIC_AWS_COGNITO_DOMAIN
+      },
+      // Production environment variables
+      supabase: {
+        url: process.env.EXPO_PUBLIC_SUPABASE_URL,
+        anonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+      },
+      app: {
+        name: getAppName(),
+        version: '5.0.0',
+        environment: 'production'
+      },
+      // Production API keys
+      apis: {
+        googleMaps: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+        stripe: {
+          publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        },
+        backend: {
+          url: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'
+        }
+      }
+    },
+    // Update configuration for OTA updates
+    updates: {
+      enabled: true,
+      checkAutomatically: 'ON_LOAD',
+      fallbackToCacheTimeout: 0
+    },
+    // Runtime version for updates
+    runtimeVersion: {
+      policy: 'sdkVersion'
+    }
+  }
+};
