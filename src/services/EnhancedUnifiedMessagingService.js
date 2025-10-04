@@ -1,4 +1,4 @@
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import { AuthGuard } from '../utils/AuthGuards';
 // AsyncStorage removed - using Supabase only
@@ -202,26 +202,24 @@ class EnhancedUnifiedMessagingService {
     }
   }
 
-  // Utility function to get account type from user ID
+  // Utility function to get account type from user metadata
+  // Note: User type is now stored in Supabase auth.users.raw_user_meta_data
+  // This method should be called with the full user object from Supabase
+  getAccountTypeFromUser(user) {
+    if (!user || !user.user_metadata) return null;
+    
+    const userType = user.user_metadata.user_type;
+    if (userType === 'customer' || userType === 'mechanic') {
+      return userType;
+    }
+    
+    return null;
+  }
+
+  // Legacy method - kept for compatibility but now returns null
   getAccountTypeFromId(userId) {
-    if (!userId) return null;
-    
-    // Check if it's a new type-specific format ID (CUSTOMER-YYYYMMDD-HHMMSS-XXXX or MECHANIC-YYYYMMDD-HHMMSS-XXXX)
-    if (userId.startsWith('CUSTOMER-')) {
-      return 'customer';
-    }
-    if (userId.startsWith('MECHANIC-')) {
-      return 'mechanic';
-    }
-    
-    // Check if it's a legacy format ID (type_timestamp_random)
-    if (userId.startsWith('customer_') || userId.startsWith('mechanic_') || userId.startsWith('admin_')) {
-      return userId.split('_')[0];
-    }
-    
-    // Legacy test account IDs are no longer supported - use new format IDs from MOCK_CONSTANTS
-    // If you encounter old numeric IDs, they should be migrated to new format
-    
+    // UUIDs don't contain user type information
+    // User type is stored in auth.users.raw_user_meta_data
     return null;
   }
 
@@ -254,13 +252,15 @@ class EnhancedUnifiedMessagingService {
   // ==================== CONVERSATION MANAGEMENT ====================
 
   async createConversation(participantIds, participantNames = [], jobId = null, type = this.CONVERSATION_TYPES.DIRECT) {
-    // Validate participant IDs follow type-specific format
+    // Validate participant IDs are valid UUIDs
     if (participantIds && participantIds.length > 0) {
       participantIds.forEach(id => {
-        if (id && typeof id === 'string' && 
-            !id.startsWith('CUSTOMER-') && !id.startsWith('MECHANIC-') && 
-            !id.startsWith('customer_') && !id.startsWith('mechanic_')) {
-          console.warn('EnhancedUnifiedMessagingService: Participant ID does not follow expected format:', id);
+        if (id && typeof id === 'string') {
+          // Check if it's a valid UUID format (Supabase auth.users.id)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(id)) {
+            console.warn('EnhancedUnifiedMessagingService: Participant ID is not a valid UUID:', id);
+          }
         }
       });
     }

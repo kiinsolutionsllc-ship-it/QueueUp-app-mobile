@@ -19,7 +19,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
@@ -405,11 +405,11 @@ const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (
     if (!participants || participants.length < 2 || !jobId) return null;
 
     // Ensure current user is included
-    const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+    const currentUserId = user?.id;
     const normalizedParticipants = Array.from(new Set([...
       participants,
       currentUserId,
-    ]));
+    ])).filter((id): id is string => Boolean(id)); // Remove undefined values and ensure type safety
 
     // Create a unique key for this conversation
     const convKey = `${jobId}-${normalizedParticipants.sort().join('-')}`;
@@ -478,7 +478,7 @@ const UnifiedMessagingScreenWithModal: React.FC<UnifiedMessagingScreenProps> = (
   const sendMessageNotification = useCallback(async (message: string, conversation: Conversation) => {
     try {
       // Get sender info
-      const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+      const currentUserId = user?.id;
       const senderRole = user?.role || 'customer';
       const senderName = senderRole === 'customer' ? 'Customer' : 'Mechanic';
       const jobTitle = conversation.metadata?.jobTitle || 'Service Request';

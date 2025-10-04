@@ -18,7 +18,7 @@ import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobCost, calculateTotalJobCost } from '../../utils/JobCostUtils';
 import { designTokens } from '../../design-system/DesignSystem';
 import { hapticService } from '../../services/HapticService';
@@ -48,7 +48,7 @@ const MechanicDashboard: React.FC<MechanicDashboardProps> = ({ navigation }) => 
 
   // Get mechanic data
   const mechanicData = {
-    id: getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+    id: user?.id,
     name: user?.name || 'John Mechanic',
     rating: 4.8,
     completedJobs: 0,
@@ -61,7 +61,7 @@ const MechanicDashboard: React.FC<MechanicDashboardProps> = ({ navigation }) => 
   };
 
   // Get jobs for this mechanic
-  const mechanicJobs = getJobsByMechanic(mechanicData.id);
+  const mechanicJobs = mechanicData.id ? getJobsByMechanic(mechanicData.id) : [];
   console.log('All mechanic jobs:', mechanicJobs);
   console.log('Mechanic ID:', mechanicData.id);
   

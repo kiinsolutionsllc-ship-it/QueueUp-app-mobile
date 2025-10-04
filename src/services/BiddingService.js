@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabaseConfig';
+import { supabase } from '../config/supabase';
 
 class BiddingService {
   // Submit a bid for a job

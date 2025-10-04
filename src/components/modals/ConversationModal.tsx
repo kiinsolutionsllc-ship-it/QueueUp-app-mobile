@@ -20,7 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { ConversationModalProps, Message } from '../../types/MessagingTypes';
 import { User } from '../../contexts/AuthContextSupabase';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobTitle, capitalizeText } from '../../utils/UnifiedJobFormattingUtils';
 import IconFallback from '../shared/IconFallback';
 
@@ -196,7 +196,7 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
       id: Date.now().toString(),
       conversationId: conversation.id,
       content: newMessage.trim(),
-      senderId: getFallbackUserIdWithTypeDetection(user?.id, user?.role as 'customer' | 'mechanic'),
+      senderId: user?.id || '',
       senderRole: user?.role || 'customer',
       status: 'sent',
       timestamp: new Date().toISOString(),
@@ -254,7 +254,7 @@ const ConversationModal: React.FC<ConversationModalProps> = ({
   // Render message bubble
   const renderMessage = useCallback(({ item }: { item: Message }) => {
     // Use role for consistency with AuthContext
-    const currentUserId = getFallbackUserIdWithTypeDetection(user?.id, user?.role as 'customer' | 'mechanic');
+    const currentUserId = user?.id;
     const isMyMessage = item.senderId === currentUserId;
     const messageTime = new Date(item.timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 

@@ -19,7 +19,7 @@ import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useUnifiedMessaging } from '../../contexts/UnifiedMessagingContext';
 import { formatVehicle } from '../../utils/UnifiedJobFormattingUtils';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobCost } from '../../utils/JobCostUtils';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
@@ -41,9 +41,9 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
   const jobContext = useJob();
-  const { getJobsByCustomer, clearAllData, createJob, updateJob, jobs } = jobContext;
-  const { vehicles } = useVehicle();
-  const { findOrCreateConversation } = useUnifiedMessaging();
+  const { getJobsByCustomer, clearAllData, createJob, updateJob, jobs } = jobContext || {};
+  const { vehicles } = useVehicle() || {};
+  const { findOrCreateConversation } = useUnifiedMessaging() || {};
   const theme = getCurrentTheme();
 
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -59,6 +59,24 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
   const [selectedJobForEdit, setSelectedJobForEdit] = useState<any>(null);
   // Vehicle data is now handled by VehicleContext
 
+  // Load user data when user is available
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user?.id && user?.user_type) {
+        try {
+          console.log('CustomerJobsScreen - Loading user data for:', user.id, user.user_type);
+          const UnifiedJobService = require('../../services/UnifiedJobService').default;
+          await UnifiedJobService.loadUserData(user.id, user.user_type);
+          console.log('CustomerJobsScreen - User data loaded successfully');
+        } catch (error) {
+          console.error('CustomerJobsScreen - Error loading user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [user?.id, user?.user_type]);
+
   // Add focus listener to refresh data when returning to this screen
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -69,13 +87,6 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
     return unsubscribe;
   }, [navigation]);
 
-  // Add effect to refresh when jobs context changes
-  useEffect(() => {
-    // This will trigger a re-render when the jobs context updates
-    console.log('CustomerJobsScreen - Jobs context updated, jobs count:', jobs.length);
-    console.log('CustomerJobsScreen - Customer jobs count:', customerJobs.length);
-  }, [jobs, customerJobs]);
-
   // Helper function to resolve vehicle data (handle both objects and IDs) - same as BidComparisonScreen
   const resolveVehicleData = (vehicle: any) => {
     if (!vehicle) return null;
@@ -85,9 +96,9 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
       return vehicle;
     }
     
-    // If it's a string that looks like a vehicle ID, try to find the full vehicle object
-    if (typeof vehicle === 'string' && /^\d{13,}$/.test(vehicle)) {
-      const fullVehicle = vehicles.find(v => v.id === vehicle);
+    // If it's a string that looks like a vehicle ID (UUID or numeric), try to find the full vehicle object
+    if (typeof vehicle === 'string' && (vehicle.length > 10 || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vehicle))) {
+      const fullVehicle = vehicles && Array.isArray(vehicles) ? vehicles.find(v => v.id === vehicle) : null;
       if (fullVehicle) {
         return fullVehicle;
       }
@@ -99,35 +110,42 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
 
   // Get customer jobs
   const customerJobs = useMemo(() => {
-    const customerId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+    const customerId = user?.id;
     console.log('CustomerJobsScreen - Customer ID:', customerId);
-    console.log('CustomerJobsScreen - All jobs from context:', jobs.length);
+    console.log('CustomerJobsScreen - All jobs from context:', jobs ? jobs.length : 0);
     console.log('CustomerJobsScreen - All jobs data:', jobs);
     
-    const customerJobs = getJobsByCustomer(customerId);
-    console.log('CustomerJobsScreen - Customer jobs from getJobsByCustomer:', customerJobs.length);
-    console.log('CustomerJobsScreen - Customer jobs data:', customerJobs);
+    const customerJobsData = customerId && getJobsByCustomer ? getJobsByCustomer(customerId) : [];
+    console.log('CustomerJobsScreen - Customer jobs from getJobsByCustomer:', customerJobsData.length);
+    console.log('CustomerJobsScreen - Customer jobs data:', customerJobsData);
     
     // Sort jobs by creation date (most recent first)
-    return customerJobs.sort((a: any, b: any) => {
+    return customerJobsData.sort((a: any, b: any) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA; // Descending order (newest first)
     });
   }, [user?.id, user?.user_type, getJobsByCustomer, jobs]);
 
+  // Add effect to refresh when jobs context changes
+  useEffect(() => {
+    // This will trigger a re-render when the jobs context updates
+    console.log('CustomerJobsScreen - Jobs context updated, jobs count:', jobs ? jobs.length : 0);
+    console.log('CustomerJobsScreen - Customer jobs count:', customerJobs ? customerJobs.length : 0);
+  }, [jobs, customerJobs]);
+
   // Filter jobs
   const filteredJobs = useMemo(() => {
-    console.log('CustomerJobsScreen - Filtering jobs. Filter:', filter, 'Customer jobs count:', customerJobs.length);
+    console.log('CustomerJobsScreen - Filtering jobs. Filter:', filter, 'Customer jobs count:', customerJobs ? customerJobs.length : 0);
     
     if (filter === 'all') {
       // Show all jobs except cancelled and completed ones
-      const filtered = customerJobs.filter((job: any) => job.status !== 'cancelled' && job.status !== 'completed');
+      const filtered = customerJobs && Array.isArray(customerJobs) ? customerJobs.filter((job: any) => job.status !== 'cancelled' && job.status !== 'completed') : [];
       console.log('CustomerJobsScreen - All filter result:', filtered.length);
       return filtered;
     }
     
-    const filtered = customerJobs.filter((job: any) => {
+    const filtered = customerJobs && Array.isArray(customerJobs) ? customerJobs.filter((job: any) => {
       switch (filter) {
         case 'scheduled':
           return job.status === 'accepted' || job.status === 'scheduled';
@@ -138,7 +156,7 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
         default:
           return job.status === filter;
       }
-    });
+    }) : [];
     
     console.log('CustomerJobsScreen - Filter result:', filtered.length);
     return filtered;
@@ -152,9 +170,10 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
     // Force a refresh by calling the job context refresh
     try {
       console.log('CustomerJobsScreen - Refreshing data...');
-      // Call the context refresh method if available
-      if (jobContext?.refreshData) {
-        await jobContext.refreshData();
+      // Load user-specific data if user is available
+      if (user?.id && user?.user_type) {
+        const UnifiedJobService = require('../../services/UnifiedJobService').default;
+        await UnifiedJobService.refreshUserData(user.id, user.user_type);
       }
       // Also force a small delay to ensure data is loaded
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -382,8 +401,35 @@ const CustomerJobsScreen: React.FC<CustomerJobsScreenProps> = ({ navigation }) =
                 />
               </View>
               {(() => {
-                const resolvedVehicle = resolveVehicleData(job.vehicle);
+                console.log('🚗 CustomerJobsScreen - Job vehicle data:', {
+                  jobId: job.id,
+                  vehicleId: job.vehicleId,
+                  vehicle: job.vehicle,
+                  vehiclesCount: vehicles.length
+                });
+                console.log('🚗 CustomerJobsScreen - Full job object:', job);
+                console.log('🚗 CustomerJobsScreen - Available vehicles:', vehicles.map(v => ({ id: v.id, make: v.make, model: v.model })));
+                
+                // Try to find vehicle data in any field that might contain it
+                const possibleVehicleFields = Object.keys(job).filter(key => 
+                  key.toLowerCase().includes('vehicle') || 
+                  key.toLowerCase().includes('car') ||
+                  key.toLowerCase().includes('auto')
+                );
+                console.log('🚗 CustomerJobsScreen - Possible vehicle fields:', possibleVehicleFields);
+                
+                // Try to resolve vehicle data
+                let resolvedVehicle = resolveVehicleData(job.vehicleId || job.vehicle);
+                console.log('🚗 CustomerJobsScreen - Resolved vehicle:', resolvedVehicle);
+                
+                // If no vehicle found but there are vehicles available, use the first one as fallback
+                if (!resolvedVehicle && vehicles.length > 0) {
+                  console.log('🚗 CustomerJobsScreen - No vehicle data in job, using first available vehicle as fallback');
+                  resolvedVehicle = vehicles[0];
+                }
+                
                 const formatted = formatVehicle(resolvedVehicle);
+                console.log('🚗 CustomerJobsScreen - Formatted vehicle:', formatted);
                 return formatted ? (
                   <Text style={[styles.vehicleInfo, { color: theme.textSecondary }]}>
                     {formatted}

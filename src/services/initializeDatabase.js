@@ -5,6 +5,9 @@
  * when the app starts up.
  */
 
+import { testSupabaseConnection } from '../config/supabase';
+import { getSupabaseMCP } from './SupabaseMCPService';
+
 let initializationPromise = null;
 
 /**
@@ -20,20 +23,32 @@ export async function initializeDatabase() {
     try {
       console.log('Database Initialization: Starting Supabase connection...');
       
-      // Supabase is configured in the backend
-      // No local database migration needed
-      console.log('Database Initialization: Using Supabase backend');
+      // Test Supabase connection using MCP service
+      const mcpService = getSupabaseMCP();
+      const healthCheck = await mcpService.healthCheck();
       
-      console.log('Database Initialization: Completed successfully');
-      return {
-        success: true,
-        message: 'Supabase connection ready'
-      };
+      if (healthCheck.success) {
+        console.log('Database Initialization: Supabase MCP connection successful');
+        return {
+          success: true,
+          message: 'Supabase MCP connection ready',
+          mcpStatus: healthCheck.data
+        };
+      } else {
+        console.warn('Database Initialization: Supabase MCP connection failed - using fallback mode');
+        return {
+          success: false,
+          error: healthCheck.error || 'Supabase MCP not configured properly',
+          fallback: true,
+          mcpStatus: healthCheck.data
+        };
+      }
     } catch (error) {
       console.error('Database Initialization: Failed:', error);
       return {
         success: false,
-        error: error.message
+        error: error.message,
+        fallback: true
       };
     }
   })();

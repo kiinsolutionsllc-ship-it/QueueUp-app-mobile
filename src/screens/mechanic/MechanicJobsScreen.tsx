@@ -19,7 +19,7 @@ import { useJob } from '../../contexts/SimplifiedJobContext';
 import { useVehicle } from '../../contexts/VehicleContext';
 import { useUnifiedMessaging } from '../../contexts/UnifiedMessagingContext';
 import { formatVehicle } from '../../utils/UnifiedJobFormattingUtils';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobCost } from '../../utils/JobCostUtils';
 import NotificationService from '../../services/NotificationService';
 import ModernHeader from '../../components/shared/ModernHeader';
@@ -272,7 +272,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
       setExpandedJobId(jobId);
       
       // Determine which tab the job should be on
-      const allJobs = [...(getAvailableJobs ? getAvailableJobs() : []), ...getJobsByMechanic(getFallbackUserIdWithTypeDetection(user?.id, user?.user_type))];
+      const allJobs = [...(getAvailableJobs ? getAvailableJobs() : []), ...(user?.id ? getJobsByMechanic(user.id) : [])];
       const targetJob = allJobs.find(job => job.id === jobId);
       
       if (targetJob) {
@@ -316,8 +316,8 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
 
   // Helper function to check if current mechanic has bid on a job
   const hasMechanicBidOnJob = (jobId: string): boolean => {
-    const mechanicId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
-    const mechanicBids = getBidsByMechanic(mechanicId);
+    const mechanicId = user?.id;
+    const mechanicBids = mechanicId ? getBidsByMechanic(mechanicId) : [];
     return mechanicBids.some(bid => bid.jobId === jobId);
   };
 
@@ -354,11 +354,14 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
 
   // Get mechanic jobs and available jobs
   const myJobs = useMemo(() => {
-    return getJobsByMechanic(getFallbackUserIdWithTypeDetection(user?.id, user?.user_type));
+    return user?.id ? getJobsByMechanic(user.id) : [];
   }, [user?.id, user?.user_type, getJobsByMechanic]);
 
   const availableJobs = useMemo(() => {
-    return getAvailableJobs ? getAvailableJobs() : [];
+    const jobs = getAvailableJobs ? getAvailableJobs() : [];
+    console.log('🔧 MechanicJobsScreen: Available jobs count:', jobs.length);
+    console.log('🔧 MechanicJobsScreen: Available jobs:', jobs.map(j => ({ id: j.id, status: j.status, title: j.title })));
+    return jobs;
   }, [getAvailableJobs]);
 
   // Filter jobs based on active tab and search query
@@ -459,7 +462,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
   };
 
   const handleMessageCustomer = async (job: any) => {
-    const mechanicId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+    const mechanicId = user?.id;
     navigation.navigate('Messaging', {
       startConversation: {
         participants: [mechanicId, job.customerId],
@@ -669,7 +672,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
                 />
               </View>
               {(() => {
-                const resolvedVehicle = resolveVehicleData(job.vehicle);
+                const resolvedVehicle = resolveVehicleData(job.vehicleId);
                 const formatted = formatVehicle(resolvedVehicle);
                 return formatted ? (
                   <Text style={[styles.vehicleInfo, { color: theme.textSecondary }]}>
@@ -764,7 +767,7 @@ const MechanicJobsScreen: React.FC<MechanicJobsScreenProps> = ({ navigation, rou
                     <IconFallback name="directions-car" size={14} color={theme.textSecondary} />
                     <Text style={[styles.vehicleText, { color: theme.text }]}>
                       {(() => {
-                        const resolvedVehicle = resolveVehicleData(job.vehicle);
+                        const resolvedVehicle = resolveVehicleData(job.vehicleId);
                         if (resolvedVehicle && typeof resolvedVehicle === 'object' && resolvedVehicle.make) {
                           return `${resolvedVehicle.make} ${resolvedVehicle.model} (${resolvedVehicle.year})`;
                         } else {

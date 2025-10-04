@@ -1,5 +1,5 @@
 // Unified Job Service - Single source of truth for all job operations
-import { safeSupabase, TABLES, testSupabaseConnection } from '../config/supabaseConfig';
+import { safeSupabase, TABLES, testSupabaseConnection } from '../config/supabase';
 import NotificationService from './NotificationService';
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import ChangeOrderService from './ChangeOrderService';
@@ -126,9 +126,42 @@ class UnifiedJobService {
         }
       );
 
-      // Set data from optimized results
-      this.jobs = userData.jobs;
-      this.bids = userData.bids;
+      // Set data from optimized results with proper column mapping
+      this.jobs = userData.jobs.map(job => ({
+        id: job.id,
+        customerId: job.customer_id,
+        mechanicId: job.mechanic_id,
+        vehicleId: job.vehicle_id,
+        title: job.title,
+        description: job.description,
+        category: job.category,
+        status: job.status,
+        priority: job.priority,
+        location: job.location,
+        estimatedCost: job.estimated_cost,
+        actualCost: job.actual_cost,
+        scheduledDate: job.scheduled_date,
+        completedDate: job.completed_date,
+        images: job.images || [],
+        documents: job.documents || [],
+        notes: job.notes || [],
+        photos: job.photos || [],
+        createdAt: job.created_at,
+        updatedAt: job.updated_at
+      }));
+      this.bids = userData.bids.map(bid => ({
+        id: bid.id,
+        jobId: bid.job_id,
+        mechanicId: bid.mechanic_id,
+        customerId: bid.customer_id,
+        amount: bid.amount,
+        price: bid.amount, // For compatibility
+        description: bid.description,
+        estimatedDuration: bid.estimated_duration,
+        status: bid.status,
+        createdAt: bid.created_at,
+        updatedAt: bid.updated_at
+      }));
       this.messages = userData.messages;
       this.jobHistory = []; // Job history can be derived from jobs
 
@@ -190,18 +223,24 @@ class UnifiedJobService {
         needsSave = true;
       }
       
-      // Check and fix customer IDs
-      if (job && job.customerId && !job.customerId.startsWith('CUSTOMER-')) {
-        console.log(`UnifiedJobService: Fixing old customer ID format: ${job.customerId}`);
-        job.customerId = uniqueIdGenerator.generateCustomerId();
-        needsSave = true;
+      // Check and fix customer IDs to be UUIDs
+      if (job && job.customerId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(job.customerId)) {
+          console.log(`UnifiedJobService: Customer ID is not a valid UUID: ${job.customerId}`);
+          // Note: We can't generate a new UUID here as it needs to match a real user
+          // This job should be removed or the customer ID should be updated manually
+        }
       }
       
-      // Check and fix mechanic IDs
-      if (job && job.selectedMechanicId && !job.selectedMechanicId.startsWith('MECHANIC-')) {
-        console.log(`UnifiedJobService: Fixing old mechanic ID format: ${job.selectedMechanicId}`);
-        job.selectedMechanicId = uniqueIdGenerator.generateMechanicId();
-        needsSave = true;
+      // Check and fix mechanic IDs to be UUIDs
+      if (job && job.selectedMechanicId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(job.selectedMechanicId)) {
+          console.log(`UnifiedJobService: Mechanic ID is not a valid UUID: ${job.selectedMechanicId}`);
+          // Note: We can't generate a new UUID here as it needs to match a real user
+          // This job should be removed or the mechanic ID should be updated manually
+        }
       }
     });
     
@@ -210,9 +249,11 @@ class UnifiedJobService {
     // Add logic to get current user IDs if available
     const originalLength = this.jobs.length;
     this.jobs = this.jobs.filter(job => {
-      // Keep jobs that have valid customer IDs
-      if (job && job.customerId && job.customerId.startsWith('CUSTOMER-')) {
-        return true;
+      if (job && job.customerId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(job.customerId)) {
+          return true;
+        }
       }
       // Remove jobs with invalid or missing customer IDs
       console.log(`UnifiedJobService: Removing orphaned job: ${job?.id} with customer ID: ${job?.customerId}`);
@@ -232,17 +273,19 @@ class UnifiedJobService {
         needsSave = true;
       }
       
-      // Check and fix bid customer/mechanic IDs
-      if (bid && bid.customerId && !bid.customerId.startsWith('CUSTOMER-')) {
-        console.log(`UnifiedJobService: Fixing old bid customer ID format: ${bid.customerId}`);
-        bid.customerId = uniqueIdGenerator.generateCustomerId();
-        needsSave = true;
+      // Check and fix bid customer/mechanic IDs to be UUIDs
+      if (bid && bid.customerId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(bid.customerId)) {
+          console.log(`UnifiedJobService: Bid customer ID is not a valid UUID: ${bid.customerId}`);
+        }
       }
       
-      if (bid && bid.mechanicId && !bid.mechanicId.startsWith('MECHANIC-')) {
-        console.log(`UnifiedJobService: Fixing old bid mechanic ID format: ${bid.mechanicId}`);
-        bid.mechanicId = uniqueIdGenerator.generateMechanicId();
-        needsSave = true;
+      if (bid && bid.mechanicId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(bid.mechanicId)) {
+          console.log(`UnifiedJobService: Bid mechanic ID is not a valid UUID: ${bid.mechanicId}`);
+        }
       }
     });
     
@@ -502,20 +545,28 @@ class UnifiedJobService {
       };
     }
 
-    // Validate that customerId follows the new type-specific format
-    if (!jobData.customerId.startsWith('CUSTOMER-')) {
-      console.warn('UnifiedJobService: Customer ID does not follow type-specific format:', jobData.customerId);
+    // Validate that customerId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(jobData.customerId)) {
+      console.warn('UnifiedJobService: Customer ID is not a valid UUID:', jobData.customerId);
       // Note: We don't reject the job, but log a warning for debugging
     }
 
+    console.log('🚗 UnifiedJobService - Creating job with vehicle data:', {
+      vehicleId: jobData.vehicleId,
+      vehicle: jobData.vehicle,
+      hasVehicleId: !!jobData.vehicleId,
+      hasVehicle: !!jobData.vehicle
+    });
+    
     const jobDataForSupabase = {
       customer_id: jobData.customerId,
       mechanic_id: jobData.mechanicId || null,
-      vehicle_id: jobData.vehicleId || null,
+      vehicle_id: jobData.vehicleId || jobData.vehicle || null, // Support both vehicleId and vehicle
       title: jobData.title,
       description: jobData.description,
       category: jobData.category || 'general',
-      status: 'open',
+      status: jobData.status || 'posted', // Use the status from jobData, default to 'posted'
       priority: jobData.priority || 'medium',
       location: jobData.location,
       estimated_cost: jobData.estimatedCost || null,
@@ -527,6 +578,8 @@ class UnifiedJobService {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+    
+    console.log('🚗 UnifiedJobService - Final vehicle_id for database:', jobDataForSupabase.vehicle_id);
     
     console.log('UnifiedJobService - Creating job with data:', {
       customerId: jobData.customerId,
@@ -564,6 +617,7 @@ class UnifiedJobService {
       customerId: data.customer_id,
       mechanicId: data.mechanic_id,
       vehicleId: data.vehicle_id,
+      vehicle: data.vehicle_id, // Also store as vehicle for compatibility
       title: data.title,
       description: data.description,
       category: data.category,
@@ -665,6 +719,8 @@ class UnifiedJobService {
       ...(updates.completedDate && { completed_date: updates.completedDate }),
       ...(updates.images && { images: updates.images }),
       ...(updates.documents && { documents: updates.documents }),
+      ...(updates.notes && { notes: updates.notes }),
+      ...(updates.photos && { photos: updates.photos }),
       updated_at: new Date().toISOString()
     };
 

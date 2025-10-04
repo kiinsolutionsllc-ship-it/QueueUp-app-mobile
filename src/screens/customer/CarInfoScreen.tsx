@@ -67,9 +67,12 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   const [currentOptions, setCurrentOptions] = useState<any>([]);
   const [currentPlaceholder, setCurrentPlaceholder] = useState<any>('');
   const [inputValue, setInputValue] = useState<any>('');
+  
+  // Track editing state
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
 
   // Use VehicleContext for saved vehicles
-  const { vehicles: savedVehicles, addVehicle, deleteVehicle } = useVehicle();
+  const { vehicles: savedVehicles, addVehicle, updateVehicle, deleteVehicle } = useVehicle();
 
   const carMakes = [
     'Acura', 'Alfa Romeo', 'Aston Martin', 'Audi', 'Bentley', 'BMW',
@@ -1290,6 +1293,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   const startAddingVehicle = () => {
     setScreenMode('addVehicle');
     setCurrentStep(1);
+    setEditingVehicleId(null); // Clear editing state for new vehicle
     setCarInfo({
       make: '',
       model: '',
@@ -1314,6 +1318,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   const editVehicle = (vehicle: any) => {
     setScreenMode('addVehicle');
     setCurrentStep(1);
+    setEditingVehicleId(vehicle.id); // Track that we're editing this vehicle
     setCarInfo({
       make: vehicle.make,
       model: vehicle.model,
@@ -1360,6 +1365,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
   const goBackToGarage = () => {
     setScreenMode('garage');
     setCurrentStep(1);
+    setEditingVehicleId(null); // Clear editing state when going back
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -1572,9 +1578,7 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
       // In a real app, this would save to the backend
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Add to saved vehicles
-      const newVehicle = {
-        id: Date.now().toString(),
+      const vehicleData = {
         make: carInfo.make,
         model: carInfo.model,
         year: carInfo.year,
@@ -1594,14 +1598,29 @@ export default function CarInfoScreen({ navigation, route }: CarInfoScreenProps)
         serviceHistory: carInfo.serviceHistory,
         image: null
       };
-      
-      await addVehicle(newVehicle);
-      
-      Alert.alert(
-        'Success',
-        'Vehicle added to your garage successfully!',
-        [{ text: 'OK', onPress: () => goBackToGarage() }]
-      );
+
+      if (editingVehicleId) {
+        // Update existing vehicle
+        await updateVehicle(editingVehicleId, vehicleData);
+        Alert.alert(
+          'Success',
+          'Vehicle updated successfully!',
+          [{ text: 'OK', onPress: () => goBackToGarage() }]
+        );
+      } else {
+        // Add new vehicle
+        const newVehicle = {
+          id: Date.now().toString(),
+          ...vehicleData
+        };
+        
+        await addVehicle(newVehicle);
+        Alert.alert(
+          'Success',
+          'Vehicle added to your garage successfully!',
+          [{ text: 'OK', onPress: () => goBackToGarage() }]
+        );
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to save vehicle information');
     } finally {

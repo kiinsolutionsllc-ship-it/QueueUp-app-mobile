@@ -15,7 +15,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useJob } from '../../contexts/SimplifiedJobContext';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { formatJobCost } from '../../utils/JobCostUtils';
 import MaterialButton from '../shared/MaterialButton';
 import MaterialTextInput from '../shared/MaterialTextInput';
@@ -167,7 +167,7 @@ export default function BidModal({ visible, onClose, selectedJob, onBidSubmitted
 
     const bidData = {
       jobId: selectedJob.id || selectedJob._id,
-      mechanicId: getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+      mechanicId: user?.id,
       mechanicName: user?.name || 'Test Mechanic',
       price: parseFloat(formData.price),
       message: formData.message.trim(),

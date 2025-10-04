@@ -52,7 +52,7 @@ export class AutoLoginService {
       console.log('AutoLoginService: Found saved credentials, attempting login...');
 
       // Attempt to sign in with saved credentials
-      const signInResult = await SupabaseAuthService.signIn(email, password);
+      const signInResult = await SupabaseAuthService.signIn(email, password, userType);
       if (signInResult.success && signInResult.user) {
         console.log('AutoLoginService: Auto-login successful');
         return {

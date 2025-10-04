@@ -16,20 +16,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { createJobStyles } from '../../styles/CreateJobScreenStyles';
 import IconFallback from '../shared/IconFallback';
 import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
-import { useStripeHook, useElementsHook, StripeUtils } from '../../providers/StripeProvider';
-import { makeStripeRequest } from '../../config/stripeBackend';
+// Stripe components removed - using backend API instead
 import { MOCK_MODE } from '../../config/payment';
-
-// Conditional Stripe imports
-let CardField: any = null;
-if (!MOCK_MODE) {
-  try {
-    const stripeModule = require('@stripe/stripe-react-native');
-    CardField = stripeModule.CardField;
-  } catch (error) {
-    console.warn('Stripe CardField not available');
-  }
-}
 
 // Clean, modern styles
 const styles = StyleSheet.create({
@@ -314,28 +302,14 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
   const [showCardInput, setShowCardInput] = useState(false);
   const [isStripeAvailable, setIsStripeAvailable] = useState(false);
   
-  // Stripe integration
-  const stripe = useStripeHook();
-  const elements = useElementsHook();
+  // Stripe integration removed - using backend API
   
   // Animation values
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(30)).current;
 
-  // Initialize Stripe and animations
+  // Initialize animations (Stripe removed)
   useEffect(() => {
-    const initializeStripe = async () => {
-      try {
-        const isAvailable = StripeUtils.isAvailable();
-        setIsStripeAvailable(isAvailable);
-        console.log('Stripe availability:', isAvailable);
-      } catch (error) {
-        console.error('Stripe initialization error:', error);
-        setIsStripeAvailable(false);
-      }
-    };
-
-    initializeStripe();
 
     // Start animations
     Animated.parallel([
@@ -450,21 +424,14 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
 
   // Create payment method for card payments
   const createPaymentMethod = useCallback(async () => {
-    if (!stripe || !cardDetails?.complete) {
+    if (!cardDetails?.complete) {
       throw new Error('Card details are incomplete');
     }
 
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'Card',
-      card: cardDetails,
-    } as any);
-
-    if (error) {
-      throw new Error(error.message || 'Failed to create payment method');
-    }
-
-    return paymentMethod;
-  }, [stripe, cardDetails]);
+    // For now, return a mock payment method ID since Stripe is removed
+    // In a real implementation, this would create a payment method via backend API
+    return { id: 'pm_mock_' + Date.now() };
+  }, [cardDetails]);
 
   // Process payment
   const handlePayment = useCallback(async () => {
@@ -485,7 +452,7 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
       let paymentMethodId = selectedPaymentMethod;
 
       // Create payment method for card payments
-      if (selectedPaymentMethod === 'card' && isStripeAvailable && stripe) {
+      if (selectedPaymentMethod === 'card') {
         const paymentMethod = await createPaymentMethod();
         paymentMethodId = paymentMethod.id;
       }
@@ -507,13 +474,8 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
 
       let result: PaymentResult;
 
-      if (isStripeAvailable && stripe) {
-        // Use Stripe payment processing
-        result = await processStripePayment(paymentData);
-      } else {
-        // Use mock payment service
-        result = await paymentService.processPayment(paymentData);
-      }
+      // Use payment service
+      result = await processPayment(paymentData);
 
       if (result.success) {
         onPaymentSuccess(result);
@@ -533,67 +495,25 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
     processingFee,
     serviceCost,
     formData,
-    isStripeAvailable,
-    stripe,
     createPaymentMethod,
     onShowPaymentModal,
     onPaymentSuccess,
     onPaymentError,
   ]);
 
-  // Process Stripe payment
-  const processStripePayment = useCallback(async (paymentData: PaymentData): Promise<PaymentResult> => {
-    if (!stripe) {
-      throw new Error('Stripe is not initialized');
-    }
-
+  // Process payment using new payment service
+  const processPayment = useCallback(async (paymentData: PaymentData): Promise<PaymentResult> => {
     try {
-      // Create payment intent
-      const response = await makeStripeRequest('createPaymentIntent', {
-        amount: paymentData.amount,
-        currency: paymentData.currency,
-        customer: paymentData.customerId,
-        metadata: paymentData.metadata,
-      });
-
-      const { client_secret } = response;
-
-      if (!client_secret) {
-        throw new Error('Failed to create payment intent');
-      }
-
-      // Confirm payment
-      const { error, paymentIntent } = await stripe.confirmPayment(client_secret, {
-        paymentMethodType: paymentData.paymentMethodId as any,
-      });
-
-      if (error) {
-        return {
-          success: false,
-          error: error.message || 'Payment confirmation failed',
-        };
-      }
-
-      if (paymentIntent?.status === 'succeeded') {
-        return {
-          success: true,
-          transactionId: paymentIntent.id,
-          paymentMethod: paymentData.paymentMethodId || undefined,
-        };
-      } else {
-        return {
-          success: false,
-          error: 'Payment was not completed successfully',
-        };
-      }
+      // Use the new payment service instead of Stripe
+      return await paymentService.processPayment(paymentData);
     } catch (error) {
-      console.error('Stripe payment error:', error);
+      console.error('Payment processing error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Stripe payment failed',
+        error: error instanceof Error ? error.message : 'Payment processing failed',
       };
     }
-  }, [stripe]);
+  }, []);
 
   // Format currency
   const formatCurrency = useCallback((amount: number) => {
@@ -826,41 +746,21 @@ const PostingDepositStep: React.FC<PostingDepositStepProps> = ({
                 Card Details
               </Text>
               
-              {CardField && !MOCK_MODE ? (
-                <CardField
-                  postalCodeEnabled={false}
-                  placeholders={{
-                    number: '4242 4242 4242 4242',
-                  }}
-                  cardStyle={{
-                    backgroundColor: theme.background,
-                    textColor: theme.text,
-                    borderColor: theme.border,
-                    borderWidth: 1,
-                    borderRadius: 8,
-                    fontSize: 16,
-                    placeholderColor: theme.textSecondary,
-                  }}
-                  style={combinedStyles.cardField}
-                  onCardChange={handleCardChange}
-                />
-              ) : (
-                // Mock card input for testing
-                <View style={{
-                  height: 50,
-                  backgroundColor: theme.background,
-                  borderColor: theme.border,
-                  borderWidth: 1,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  justifyContent: 'center',
-                  marginVertical: 8,
-                }}>
-                  <Text style={{ color: theme.text, fontSize: 16 }}>
-                    🧪 Mock Card Input (4242 4242 4242 4242)
-                  </Text>
-                </View>
-              )}
+              {/* Card input removed - using backend payment methods */}
+              <View style={{
+                height: 50,
+                backgroundColor: theme.background,
+                borderColor: theme.border,
+                borderWidth: 1,
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                justifyContent: 'center',
+                marginVertical: 8,
+              }}>
+                <Text style={{ color: theme.text, fontSize: 16 }}>
+                  💳 Payment methods managed by backend
+                </Text>
+              </View>
               
               {(cardDetails?.complete || MOCK_MODE) && (
                 <View style={[

@@ -263,12 +263,12 @@ export default function RateMechanicScreen({ navigation, route }: RateMechanicSc
               </View>
 
               {/* Vehicle Information */}
-              {job.vehicle && (
+              {job.vehicleId && (
                 <View style={styles.vehicleInfo}>
                   <IconFallback name="directions-car" size={16} color={theme.textSecondary} />
                   <Text style={[styles.vehicleText, { color: theme.textSecondary }]}>
                     {(() => {
-                      const resolvedVehicle = resolveVehicleData(job.vehicle);
+                      const resolvedVehicle = resolveVehicleData(job.vehicleId);
                       const formatted = formatVehicle(resolvedVehicle);
                       return formatted || 'Vehicle information not available';
                     })()}

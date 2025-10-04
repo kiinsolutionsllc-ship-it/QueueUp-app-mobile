@@ -21,7 +21,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
 import BidSubmissionModal from '../../components/shared/BidSubmissionModal';
-import { safeSupabase, TABLES } from '../../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../../config/supabase';
 import BiddingService from '../../services/BiddingService';
 import FavoritesService from '../../services/FavoritesService';
 import { useLoadingState, withLoading, LOADING_TYPES } from '../../utils/LoadingStateManager';

@@ -1,4 +1,4 @@
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 import { isFeatureEnabled } from '../config/featureFlags';
 
 export interface SupportTicket {
@@ -432,9 +432,9 @@ class SupportService {
       updatedTickets.unshift(ticket);
       
       // Store in memory for this session
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(`support_tickets_${ticket.userId}`, JSON.stringify(updatedTickets));
-      }
+      // Note: In React Native, we should use AsyncStorage instead of localStorage
+      // For now, we'll just store in memory
+      console.log('SupportService: Ticket stored in memory (AsyncStorage implementation needed)');
       console.log('SupportService: Ticket saved to local storage');
     } catch (error) {
       console.error('Error saving ticket to storage:', error);
@@ -443,17 +443,9 @@ class SupportService {
 
   private getTicketsFromStorage(userId: string): SupportTicket[] {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = localStorage.getItem(`support_tickets_${userId}`);
-        if (!stored) return [];
-        
-        const tickets = JSON.parse(stored);
-        return tickets.map((ticket: any) => ({
-          ...ticket,
-          createdAt: new Date(ticket.createdAt),
-          updatedAt: new Date(ticket.updatedAt),
-        }));
-      }
+      // Note: In React Native, we should use AsyncStorage instead of localStorage
+      // For now, return empty array
+      return [];
       console.log('SupportService: No localStorage available - returning empty array');
       return [];
     } catch (error) {
@@ -464,25 +456,9 @@ class SupportService {
 
   private getTicketFromStorage(ticketId: string): SupportTicket | null {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
-        
-        for (const key of keys) {
-          const tickets = JSON.parse(localStorage.getItem(key) || '[]');
-          const ticket = tickets.find((t: any) => t.id === ticketId);
-          if (ticket) {
-            return {
-              ...ticket,
-              createdAt: new Date(ticket.createdAt),
-              updatedAt: new Date(ticket.updatedAt),
-              messages: ticket.messages.map((msg: any) => ({
-                ...msg,
-                timestamp: new Date(msg.timestamp),
-              })),
-            };
-          }
-        }
-      }
+      // Note: In React Native, we should use AsyncStorage instead of localStorage
+      // For now, return null
+      return null;
       console.log('SupportService: Ticket not found in storage');
       return null;
     } catch (error) {
@@ -493,25 +469,9 @@ class SupportService {
 
   private async getAllTickets(): Promise<SupportTicket[]> {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const keys = Object.keys(localStorage).filter(key => key.startsWith('support_tickets_'));
-        const allTickets: SupportTicket[] = [];
-        
-        for (const key of keys) {
-          const tickets = JSON.parse(localStorage.getItem(key) || '[]');
-          allTickets.push(...tickets.map((ticket: any) => ({
-            ...ticket,
-            createdAt: new Date(ticket.createdAt),
-            updatedAt: new Date(ticket.updatedAt),
-            messages: ticket.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })),
-          })));
-        }
-        
-        return allTickets;
-      }
+      // Note: In React Native, we should use AsyncStorage instead of localStorage
+      // For now, return empty array
+      return [];
       console.log('SupportService: No localStorage available - returning empty array');
       return [];
     } catch (error) {

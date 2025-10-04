@@ -74,6 +74,10 @@ export const formatVehicle = (vehicle: Vehicle | string): string => {
     if (/^\d{13,}$/.test(vehicle)) {
       return 'Vehicle information not available';
     }
+    // If it looks like a UUID, it's likely a vehicle ID
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(vehicle)) {
+      return 'Vehicle information not available';
+    }
     // Otherwise, return the string as-is (might be a formatted vehicle string)
     return vehicle;
   }

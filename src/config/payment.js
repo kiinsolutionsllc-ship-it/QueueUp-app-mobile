@@ -6,7 +6,7 @@
 // ========================================
 
 // Set to false when ready for production
-export const MOCK_MODE = true;
+export const MOCK_MODE = false;
 
 // Stripe Configuration
 export const STRIPE_CONFIG = {

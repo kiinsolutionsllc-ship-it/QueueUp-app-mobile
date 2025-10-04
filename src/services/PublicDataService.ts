@@ -9,7 +9,7 @@
  * - Public business information
  */
 
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 
 export interface SubscriptionPlan {
   id: string;
@@ -102,21 +102,26 @@ class PublicDataService {
   private async loadSubscriptionPlans(): Promise<void> {
     try {
       const { data, error } = await safeSupabase
-        .from(TABLES.SUBSCRIPTIONS)
+        .from(TABLES.SUBSCRIPTION_PLANS)
         .select('*')
-        .eq('is_active', true)
-        .order('price', { ascending: true });
+        .eq('is_active', true);
 
       if (error) {
         console.error('PublicDataService: Error loading subscription plans:', error);
-        this.subscriptionPlans = [];
+        // If table doesn't exist, use default data
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('PublicDataService: subscription_plans table not found, using default data');
+          this.loadDefaultSubscriptionPlans();
+        } else {
+          this.subscriptionPlans = [];
+        }
       } else {
         this.subscriptionPlans = data || [];
         console.log(`PublicDataService: Loaded ${this.subscriptionPlans.length} subscription plans`);
       }
     } catch (error) {
       console.error('PublicDataService: Error loading subscription plans:', error);
-      this.subscriptionPlans = [];
+      this.loadDefaultSubscriptionPlans();
     }
   }
 
@@ -128,19 +133,24 @@ class PublicDataService {
       const { data, error } = await safeSupabase
         .from('service_types')
         .select('*')
-        .eq('is_active', true)
-        .order('name', { ascending: true });
+        .eq('is_active', true);
 
       if (error) {
         console.error('PublicDataService: Error loading service types:', error);
-        this.serviceTypes = [];
+        // If table doesn't exist, use default data
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('PublicDataService: service_types table not found, using default data');
+          this.loadDefaultServiceTypes();
+        } else {
+          this.serviceTypes = [];
+        }
       } else {
         this.serviceTypes = data || [];
         console.log(`PublicDataService: Loaded ${this.serviceTypes.length} service types`);
       }
     } catch (error) {
       console.error('PublicDataService: Error loading service types:', error);
-      this.serviceTypes = [];
+      this.loadDefaultServiceTypes();
     }
   }
 
@@ -156,7 +166,13 @@ class PublicDataService {
 
       if (error) {
         console.error('PublicDataService: Error loading app config:', error);
-        this.appConfig = new Map();
+        // If table doesn't exist, use default data
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('PublicDataService: app_config table not found, using default data');
+          this.loadDefaultAppConfig();
+        } else {
+          this.appConfig = new Map();
+        }
       } else {
         this.appConfig = new Map();
         if (data) {
@@ -168,8 +184,117 @@ class PublicDataService {
       }
     } catch (error) {
       console.error('PublicDataService: Error loading app config:', error);
-      this.appConfig = new Map();
+      this.loadDefaultAppConfig();
     }
+  }
+
+  /**
+   * Load default service types when table doesn't exist
+   */
+  private loadDefaultServiceTypes(): void {
+    this.serviceTypes = [
+      {
+        id: 'oil-change',
+        name: 'Oil Change',
+        category: 'Maintenance',
+        description: 'Regular oil and filter change service',
+        icon: '🛢️',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'brake-service',
+        name: 'Brake Service',
+        category: 'Safety',
+        description: 'Brake inspection and repair service',
+        icon: '🛑',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'tire-service',
+        name: 'Tire Service',
+        category: 'Maintenance',
+        description: 'Tire rotation, balancing, and replacement',
+        icon: '🛞',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'engine-diagnostic',
+        name: 'Engine Diagnostic',
+        category: 'Diagnostic',
+        description: 'Engine diagnostic and troubleshooting',
+        icon: '🔧',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    console.log('PublicDataService: Loaded default service types');
+  }
+
+  /**
+   * Load default app config when table doesn't exist
+   */
+  private loadDefaultAppConfig(): void {
+    this.appConfig = new Map([
+      ['app_name', 'QueueUp'],
+      ['app_version', '1.0.0'],
+      ['support_email', 'support@queueup.com'],
+      ['max_file_size', '10485760'], // 10MB
+      ['allowed_file_types', 'jpg,jpeg,png,pdf,doc,docx']
+    ]);
+    console.log('PublicDataService: Loaded default app config');
+  }
+
+  /**
+   * Load default subscription plans when table doesn't exist
+   */
+  private loadDefaultSubscriptionPlans(): void {
+    this.subscriptionPlans = [
+      {
+        id: 'free',
+        name: 'Free',
+        description: 'Basic features for getting started',
+        price: 0,
+        currency: 'USD',
+        billing_cycle: 'monthly',
+        features: ['Basic job posting', 'Limited messaging', 'Basic support'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'professional',
+        name: 'Professional',
+        description: 'Advanced features for professionals',
+        price: 29.99,
+        currency: 'USD',
+        billing_cycle: 'monthly',
+        features: ['Unlimited job posting', 'Priority support', 'Advanced analytics', 'Custom branding'],
+        is_popular: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'enterprise',
+        name: 'Enterprise',
+        description: 'Full-featured solution for businesses',
+        price: 99.99,
+        currency: 'USD',
+        billing_cycle: 'monthly',
+        features: ['Everything in Professional', 'API access', 'White-label options', 'Dedicated support'],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ];
+    console.log('PublicDataService: Loaded default subscription plans');
   }
 
   /**
@@ -266,8 +391,8 @@ class PublicDataService {
       ['app_name', 'QueueUp'],
       ['app_version', '1.0.0'],
       ['support_email', 'support@queueup.com'],
-      ['max_file_size', 10485760], // 10MB
-      ['allowed_file_types', ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx']]
+      ['max_file_size', '10485760'], // 10MB
+      ['allowed_file_types', 'jpg,jpeg,png,pdf,doc,docx']
     ]);
 
     console.log('PublicDataService: Loaded default data');

@@ -41,7 +41,12 @@ export const UnifiedMessagingProvider = ({ children }) => {
   const loadConversations = useCallback(async () => {
     try {
       // Get conversations sorted by newest first for the current user
-      const userId = user?.id; // No fallback - user must be logged in
+      const userId = user?.id;
+      if (!userId) {
+        console.log('UnifiedMessagingContext: No user ID available, skipping conversation load');
+        setConversations([]);
+        return;
+      }
       const sortedConversations = enhancedUnifiedMessagingService.getConversationsByUser(userId);
       setConversations(sortedConversations);
     } catch (error) {
@@ -126,7 +131,12 @@ export const UnifiedMessagingProvider = ({ children }) => {
 
   const markConversationAsRead = async (conversationId) => {
     try {
-      await enhancedUnifiedMessagingService.markMessageAsRead(conversationId, 'current_user');
+      const userId = user?.id;
+      if (!userId) {
+        console.warn('UnifiedMessagingContext: No user ID available for marking conversation as read');
+        return;
+      }
+      await enhancedUnifiedMessagingService.markMessageAsRead(conversationId, userId);
       await loadConversations();
     } catch (error) {
       console.error('UnifiedMessagingContext: Error marking conversation as read:', error);
@@ -137,7 +147,14 @@ export const UnifiedMessagingProvider = ({ children }) => {
 
   const sendMessage = async (conversationId, senderId, content, type = 'text', metadata = {}) => {
     try {
-      const result = await enhancedUnifiedMessagingService.sendMessage(conversationId, senderId, content, type, metadata);
+      // Use the current user's ID if senderId is not provided or invalid
+      const actualSenderId = senderId || user?.id;
+      if (!actualSenderId) {
+        console.error('UnifiedMessagingContext: No sender ID available for sending message');
+        return { success: false, error: 'No sender ID available' };
+      }
+      
+      const result = await enhancedUnifiedMessagingService.sendMessage(conversationId, actualSenderId, content, type, metadata);
       if (result.success) {
         await loadMessages(conversationId);
         await loadConversations();

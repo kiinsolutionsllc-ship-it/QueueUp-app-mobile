@@ -2,11 +2,13 @@ import { useState, useCallback } from 'react';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageData, ImageUploadResult, UseImageManagementReturn } from '../types/JobTypes';
+import { imageStorageService, ImageUploadOptions } from '../services/ImageStorageService';
 
 interface UseImageManagementProps {
   maxImages?: number;
   maxImageSize?: number; // in MB
   compressionQuality?: number;
+  uploadOptions?: ImageUploadOptions;
   onImageAdd?: (image: ImageData) => void;
   onImageRemove?: (index: number) => void;
   onUploadComplete?: (results: ImageUploadResult[]) => void;
@@ -18,6 +20,7 @@ export const useImageManagement = ({
   maxImages = 5, // Default to 5 photos
   maxImageSize = 5, // 5MB
   compressionQuality = 0.7,
+  uploadOptions,
   onImageAdd,
   onImageRemove,
   onUploadComplete,
@@ -80,7 +83,7 @@ export const useImageManagement = ({
 
       // Launch camera
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.7, // Balanced quality
@@ -138,7 +141,7 @@ export const useImageManagement = ({
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsMultipleSelection: true,
         quality: 0.7, // Balanced quality
         selectionLimit: maxImages - images.length,
@@ -211,10 +214,16 @@ export const useImageManagement = ({
     });
   }, [onImageRemove]);
 
-  // Upload images (simulate upload)
+  // Upload images to Supabase Storage
   const uploadImages = useCallback(async (): Promise<ImageUploadResult[]> => {
     if (images.length === 0) {
       return [];
+    }
+
+    if (!uploadOptions) {
+      const errorMessage = 'Upload options not provided';
+      onUploadError?.(errorMessage);
+      throw new Error(errorMessage);
     }
 
     setIsUploading(true);
@@ -226,26 +235,16 @@ export const useImageManagement = ({
       for (let i = 0; i < images.length; i++) {
         const image = images[i];
         
-        // Simulate upload progress
+        // Update progress
         setUploadProgress((i / images.length) * 100);
         
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Upload to Supabase Storage
+        const uploadResult = await imageStorageService.uploadImage(image.uri, {
+          ...uploadOptions,
+          fileName: image.name
+        });
         
-        // Simulate upload success/failure
-        const success = Math.random() > 0.1; // 90% success rate for demo
-        
-        if (success) {
-          results.push({
-            success: true,
-            url: `https://example.com/uploads/${image.name}`,
-          });
-        } else {
-          results.push({
-            success: false,
-            error: `Failed to upload ${image.name}`,
-          });
-        }
+        results.push(uploadResult);
       }
       
       setUploadProgress(100);
@@ -268,7 +267,7 @@ export const useImageManagement = ({
     } finally {
       setIsUploading(false);
     }
-  }, [images, onUploadComplete, onUploadError, onUploadSuccess]);
+  }, [images, uploadOptions, onUploadComplete, onUploadError, onUploadSuccess]);
 
   // Clear all images
   const clearImages = useCallback(() => {

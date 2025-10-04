@@ -1,7 +1,7 @@
 // AsyncStorage removed - using Supabase only
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import { MOCK_MODE } from '../config/payment';
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 
 /**
  * SUBSCRIPTION SERVICE
@@ -662,15 +662,15 @@ class SubscriptionService {
       const periodStart = trialEnd || now;
       const periodEnd = new Date(periodStart.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days
 
-      // Validate that userId follows the new type-specific format
-      if (!userId.startsWith('CUSTOMER-') && !userId.startsWith('MECHANIC-') && 
-          !userId.startsWith('customer_') && !userId.startsWith('mechanic_')) {
-        console.warn('SubscriptionService: User ID does not follow expected format:', userId);
+      // Validate that userId is a valid UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        console.warn('SubscriptionService: User ID is not a valid UUID:', userId);
       }
 
       const subscription = {
         id: uniqueIdGenerator.generateId('sub'),
-        user_id: userId, // Should be CUSTOMER- or MECHANIC- prefixed ID
+        user_id: userId, // Should be a valid UUID from Supabase auth.users.id
         plan_id: planId,
         status: plan.trial_period_days > 0 ? this.SUBSCRIPTION_STATUS.TRIALING : this.SUBSCRIPTION_STATUS.ACTIVE,
         stripe_subscription_id: MOCK_MODE ? `sub_mock_${Date.now()}` : null,

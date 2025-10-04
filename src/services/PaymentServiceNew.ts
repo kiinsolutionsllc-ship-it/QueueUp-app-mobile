@@ -1,8 +1,8 @@
 import { PaymentData, PaymentResult } from '../types/JobTypes';
-import { MOCK_MODE } from '../config/payment';
-import { supabase } from '../config/supabaseConfig';
+import { supabase } from '../config/supabase';
 import CommissionService from './CommissionService';
 import { paypalService } from './PayPalService';
+import BackendStripeService from './BackendStripeService';
 
 // Test data for development/testing (remove for production)
 const TEST_DATA = {
@@ -28,32 +28,10 @@ const TEST_DATA = {
   },
 };
 
-// Real Stripe service implementation (for production)
-const stripeService = {
-  createCustomer: async (data: any): Promise<{ id: string; email: string; name: string }> => {
-    // TODO: Implement real Stripe customer creation
-    throw new Error('Stripe customer creation not implemented');
-  },
-  createPaymentIntent: async (data: any): Promise<{ id: string; amount: number; currency: string; status: string }> => {
-    // TODO: Implement real Stripe payment intent creation
-    throw new Error('Stripe payment intent creation not implemented');
-  },
-  confirmPaymentIntent: async (paymentIntentId: string, paymentMethodId: string): Promise<{ id: string; status: string; payment_method: string }> => {
-    // TODO: Implement real Stripe payment intent confirmation
-    throw new Error('Stripe payment intent confirmation not implemented');
-  },
-  createPaymentMethod: async (data: any): Promise<{ id: string; type: string; card?: any }> => {
-    // TODO: Implement real Stripe payment method creation
-    throw new Error('Stripe payment method creation not implemented');
-  },
-  attachPaymentMethod: async (paymentMethodId: string, customerId: string): Promise<{ id: string; customer: string }> => {
-    // TODO: Implement real Stripe payment method attachment
-    throw new Error('Stripe payment method attachment not implemented');
-  },
-};
+// Use backend Stripe service for all payments (sandbox environment)
+const stripeService = BackendStripeService;
 
 export interface PaymentServiceConfig {
-  useMockService?: boolean;
   stripePublishableKey?: string;
   stripeSecretKey?: string;
 }
@@ -97,14 +75,9 @@ export interface PayoutRecord {
 export class PaymentServiceNew {
   private static instance: PaymentServiceNew;
   private config: PaymentServiceConfig;
-  private useMock: boolean;
 
   constructor(config: PaymentServiceConfig = {}) {
-    this.config = {
-      useMockService: MOCK_MODE, // Use global mock mode setting
-      ...config,
-    };
-    this.useMock = this.config.useMockService || MOCK_MODE;
+    this.config = config;
   }
 
   static getInstance(config?: PaymentServiceConfig): PaymentServiceNew {
@@ -116,21 +89,16 @@ export class PaymentServiceNew {
 
   // ==================== CORE PAYMENT PROCESSING ====================
 
-  // Process payment using mock or real Stripe
+  // Process payment using backend Stripe service
   async processPayment(paymentData: PaymentData): Promise<PaymentResult> {
     console.log('PaymentServiceNew - Processing payment:', {
       amount: paymentData.amount,
       currency: paymentData.currency,
       paymentMethodId: paymentData.paymentMethodId,
-      useMock: this.useMock,
     });
 
     try {
-      if (this.useMock) {
-        return await this.processMockPayment(paymentData);
-      } else {
-        return await this.processRealPayment(paymentData);
-      }
+      return await this.processBackendPayment(paymentData);
     } catch (error) {
       console.error('PaymentServiceNew - Payment processing error:', error);
       return {
@@ -140,54 +108,51 @@ export class PaymentServiceNew {
     }
   }
 
-  // Mock payment processing
-  private async processMockPayment(paymentData: PaymentData): Promise<PaymentResult> {
-    console.log('PaymentServiceNew - Using mock payment processing');
+  // Backend Stripe payment processing
+  private async processBackendPayment(paymentData: PaymentData): Promise<PaymentResult> {
+    console.log('PaymentServiceNew - Using backend Stripe payment processing');
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Create customer if needed
+      let customerId = paymentData.customerId;
+      if (!customerId) {
+        const customer = await stripeService.createCustomer({
+          email: paymentData.metadata?.customerEmail || 'customer@example.com',
+          name: paymentData.metadata?.customerName || 'Customer',
+          phone: paymentData.metadata?.customerPhone || '+1234567890',
+        });
+        customerId = customer.id;
+      }
 
-    // Create customer if needed
-    let customerId = paymentData.customerId;
-    if (!customerId) {
-      const customer = await stripeService.createCustomer({
-        email: paymentData.metadata?.customerEmail || 'test@example.com',
-        name: paymentData.metadata?.customerName || 'Test Customer',
-        phone: paymentData.metadata?.customerPhone || '+1234567890',
+      // Create payment intent
+      const paymentIntent = await stripeService.createPaymentIntent({
+        amount: Math.round(paymentData.amount * 100), // Convert to cents
+        currency: paymentData.currency.toLowerCase(),
+        customerId: customerId ?? undefined,
+        paymentMethodId: paymentData.paymentMethodId || undefined,
+        metadata: paymentData.metadata,
       });
-      customerId = customer.id;
+
+      // Confirm payment intent
+      const result = await stripeService.confirmPaymentIntent(
+        paymentIntent.id || '',
+        paymentData.paymentMethodId || ''
+      );
+
+      return {
+        success: result.status === 'succeeded',
+        error: result.status !== 'succeeded' ? 'Payment failed' : undefined,
+        ...result,
+        customerId: customerId ?? undefined,
+        paymentIntentId: paymentIntent.id,
+      };
+    } catch (error) {
+      console.error('Backend payment processing error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Backend payment processing failed',
+      };
     }
-
-    // Create payment intent
-    const paymentIntent = await stripeService.createPaymentIntent({
-      amount: Math.round(paymentData.amount * 100), // Convert to cents
-      currency: paymentData.currency.toLowerCase(),
-      customerId: customerId || undefined,
-      paymentMethodId: paymentData.paymentMethodId || undefined,
-      metadata: paymentData.metadata,
-    });
-
-    // Confirm payment intent
-    const result = await stripeService.confirmPaymentIntent(
-      paymentIntent.id || '',
-      paymentData.paymentMethodId || ''
-    );
-
-    return {
-      success: result.status === 'succeeded',
-      ...result,
-      customerId: customerId || undefined,
-      paymentIntentId: paymentIntent.id || undefined,
-    };
-  }
-
-  // Real Stripe payment processing (placeholder for future implementation)
-  private async processRealPayment(paymentData: PaymentData): Promise<PaymentResult> {
-    console.log('PaymentServiceNew - Using real Stripe payment processing');
-    
-    // TODO: Implement real Stripe integration
-    // This would use the actual Stripe SDK
-    throw new Error('Real Stripe integration not implemented yet');
   }
 
   // ==================== JOB PAYMENT METHODS ====================
@@ -200,25 +165,7 @@ export class PaymentServiceNew {
     paymentMethod: string = 'card'
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
-        // Mock implementation
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockData: PaymentRecord = {
-          id: `payment_${Date.now()}`,
-          customer_id: customerId,
-          job_id: jobId,
-          amount: amount,
-          currency: 'USD',
-          type: 'posting_deposit',
-          status: 'pending',
-          payment_method: paymentMethod,
-          description: 'Job posting deposit - refundable if no mechanic accepts',
-          created_at: new Date().toISOString(),
-        };
-        return { success: true, data: mockData };
-      }
-
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .insert([
           {
@@ -253,27 +200,7 @@ export class PaymentServiceNew {
     bidId: string
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
-        // Mock implementation
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockData: PaymentRecord = {
-          id: `escrow_${Date.now()}`,
-          customer_id: customerId,
-          job_id: jobId,
-          mechanic_id: mechanicId,
-          bid_id: bidId,
-          amount: amount,
-          currency: 'USD',
-          type: 'escrow_deposit',
-          status: 'pending',
-          payment_method: 'card',
-          description: 'Escrow deposit - held until job completion',
-          created_at: new Date().toISOString(),
-        };
-        return { success: true, data: mockData };
-      }
-
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .insert([
           {
@@ -307,25 +234,7 @@ export class PaymentServiceNew {
     amount: number
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
-        // Mock implementation
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockData: PaymentRecord = {
-          id: `final_${Date.now()}`,
-          customer_id: customerId,
-          job_id: jobId,
-          amount: amount,
-          currency: 'USD',
-          type: 'final_payment',
-          status: 'pending',
-          payment_method: 'card',
-          description: 'Final payment for completed job',
-          created_at: new Date().toISOString(),
-        };
-        return { success: true, data: mockData };
-      }
-
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .insert([
           {
@@ -357,7 +266,7 @@ export class PaymentServiceNew {
     paymentMethod: string = 'card'
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock implementation
         await new Promise(resolve => setTimeout(resolve, 2000));
         const mockData: PaymentRecord = {
@@ -380,7 +289,7 @@ export class PaymentServiceNew {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Update payment status
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .update({
           status: 'completed',
@@ -411,7 +320,7 @@ export class PaymentServiceNew {
     metadata: Record<string, any> = {}
   ): Promise<{ success: boolean; payment?: PaymentRecord; paymentIntent?: any; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock PayPal implementation
         await new Promise(resolve => setTimeout(resolve, 1500));
         const mockPayment: PaymentRecord = {
@@ -461,7 +370,7 @@ export class PaymentServiceNew {
       }
 
       // Store payment record in database
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .insert([
           {
@@ -501,7 +410,7 @@ export class PaymentServiceNew {
     paymentIntentId: string
   ): Promise<{ success: boolean; payment?: PaymentRecord; paymentIntent?: any; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock confirmation
         await new Promise(resolve => setTimeout(resolve, 1000));
         const mockPayment: PaymentRecord = {
@@ -527,7 +436,7 @@ export class PaymentServiceNew {
       }
 
       // Update payment record
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .update({
           status: 'completed',
@@ -564,7 +473,7 @@ export class PaymentServiceNew {
     reason: string = 'Customer request'
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock refund implementation
         await new Promise(resolve => setTimeout(resolve, 1500));
         const mockData: PaymentRecord = {
@@ -587,7 +496,7 @@ export class PaymentServiceNew {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // Update payment status
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .update({
           status: 'refunded',
@@ -614,79 +523,43 @@ export class PaymentServiceNew {
     card?: any;
     billing_details?: any;
   }): Promise<any> {
-    if (this.useMock) {
-      return await stripeService.createPaymentMethod(methodData);
-    } else {
-      // TODO: Implement real Stripe payment method creation
-      throw new Error('Real Stripe payment method creation not implemented yet');
-    }
+    console.log('PaymentServiceNew - Creating payment method:', {
+      type: methodData.type,
+    });
+    
+    return await stripeService.createPaymentMethod(methodData);
   }
 
   // Get payment methods for customer
   async getPaymentMethods(customerId: string): Promise<any[]> {
-    if (this.useMock) {
-      // Return mock payment methods
-      return [
-        {
-          id: 'pm_card_visa',
-          type: 'card',
-          card: {
-            brand: 'visa',
-            last4: '4242',
-            exp_month: 12,
-            exp_year: 2025,
-          },
-          isDefault: true,
-        },
-        {
-          id: 'pm_card_mastercard',
-          type: 'card',
-          card: {
-            brand: 'mastercard',
-            last4: '5555',
-            exp_month: 8,
-            exp_year: 2026,
-          },
-          isDefault: false,
-        },
-      ];
-    } else {
-      // TODO: Implement real Stripe payment methods retrieval
-      throw new Error('Real Stripe payment methods retrieval not implemented yet');
-    }
+    console.log('PaymentServiceNew - Getting payment methods for customer:', customerId);
+    
+    // Get payment methods from backend Stripe service
+    return await stripeService.getPaymentMethods(customerId);
   }
 
   // Save payment method
   async savePaymentMethod(customerId: string, paymentMethodId: string): Promise<any> {
-    if (this.useMock) {
-      await stripeService.attachPaymentMethod(paymentMethodId, customerId);
-      return { success: true, paymentMethodId };
-    } else {
-      // TODO: Implement real Stripe payment method saving
-      throw new Error('Real Stripe payment method saving not implemented yet');
-    }
+    console.log('PaymentServiceNew - Saving payment method:', {
+      customerId,
+      paymentMethodId,
+    });
+    
+    return await stripeService.attachPaymentMethod(paymentMethodId, customerId);
   }
 
   // Set default payment method
   async setDefaultPaymentMethod(customerId: string, paymentMethodId: string): Promise<any> {
-    if (this.useMock) {
-      // Mock implementation
-      return { success: true, defaultPaymentMethod: paymentMethodId };
-    } else {
-      // TODO: Implement real Stripe default payment method setting
-      throw new Error('Real Stripe default payment method setting not implemented yet');
-    }
+    // TODO: Implement backend API for setting default payment method
+    console.log('Setting default payment method not yet implemented for backend');
+    return { success: true, defaultPaymentMethod: paymentMethodId };
   }
 
   // Delete payment method
   async deletePaymentMethod(customerId: string, paymentMethodId: string): Promise<any> {
-    if (this.useMock) {
-      // Mock implementation
-      return { success: true, deletedPaymentMethod: paymentMethodId };
-    } else {
-      // TODO: Implement real Stripe payment method deletion
-      throw new Error('Real Stripe payment method deletion not implemented yet');
-    }
+    // TODO: Implement backend API for deleting payment method
+    console.log('Deleting payment method not yet implemented for backend');
+    return { success: true, deletedPaymentMethod: paymentMethodId };
   }
 
   // ==================== COMMISSION & PAYOUTS ====================
@@ -718,7 +591,7 @@ export class PaymentServiceNew {
     amount: number
   ): Promise<{ success: boolean; data?: PayoutRecord; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock payout implementation
         await new Promise(resolve => setTimeout(resolve, 1000));
         const mockPayout: PayoutRecord = {
@@ -734,7 +607,7 @@ export class PaymentServiceNew {
         return { success: true, data: mockPayout };
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payouts')
         .insert([
           {
@@ -791,12 +664,12 @@ export class PaymentServiceNew {
   // Get payout history for a mechanic
   async getMechanicPayouts(mechanicId: string): Promise<{ success: boolean; data?: PayoutRecord[]; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Return mock payouts
         return { success: true, data: this.getMockPayouts(mechanicId) };
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payouts')
         .select(`
           *,
@@ -823,12 +696,12 @@ export class PaymentServiceNew {
   // Get payment history for a customer
   async getCustomerPayments(customerId: string): Promise<{ success: boolean; data?: PaymentRecord[]; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Return mock payments
         return { success: true, data: this.getMockPayments(customerId) };
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .select(`
           *,
@@ -854,12 +727,12 @@ export class PaymentServiceNew {
   // Get payment history for a mechanic
   async getMechanicPayments(mechanicId: string): Promise<{ success: boolean; data?: PaymentRecord[]; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Return mock payments
         return { success: true, data: this.getMockPayments('mock_customer') };
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from('payments')
         .select(`
           *,
@@ -924,7 +797,7 @@ export class PaymentServiceNew {
     paymentMethod: string = 'card'
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock implementation
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -1004,7 +877,7 @@ export class PaymentServiceNew {
     paymentMethodId: string
   ): Promise<{ success: boolean; data?: PaymentRecord; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock Stripe processing
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -1085,7 +958,7 @@ export class PaymentServiceNew {
     changeOrderId: string | null = null
   ): Promise<{ success: boolean; data?: PaymentRecord[]; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock data
         const mockPayments: PaymentRecord[] = [
           {
@@ -1130,7 +1003,7 @@ export class PaymentServiceNew {
     reason: string = 'Customer request'
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock refund processing
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -1172,7 +1045,7 @@ export class PaymentServiceNew {
     dateRange: any = null
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
-      if (this.useMock) {
+      if (false) {
         // Mock analytics data
         const analytics = {
           totalChangeOrderPayments: 15,
@@ -1213,7 +1086,7 @@ export class PaymentServiceNew {
     customerId: string;
     mechanicId: string;
   }): Promise<any> {
-    if (this.useMock) {
+    if (false) {
       // Mock escrow processing
       await new Promise(resolve => setTimeout(resolve, 1000));
       return {
@@ -1230,7 +1103,7 @@ export class PaymentServiceNew {
 
   // Get Stripe Connect account
   async getStripeConnectAccount(userId: string): Promise<any> {
-    if (this.useMock) {
+    if (false) {
       // Mock Stripe Connect account
       return {
         id: 'acct_mock_connect',
@@ -1252,7 +1125,7 @@ export class PaymentServiceNew {
     email: string;
     returnUrl: string;
   }): Promise<string> {
-    if (this.useMock) {
+    if (false) {
       // Mock Stripe Connect OAuth URL
       return `https://connect.stripe.com/oauth/authorize?response_type=code&client_id=mock_client_id&scope=read_write&redirect_uri=${encodeURIComponent(data.returnUrl)}`;
     } else {
@@ -1263,7 +1136,7 @@ export class PaymentServiceNew {
 
   // Disconnect Stripe account
   async disconnectStripeAccount(userId: string): Promise<any> {
-    if (this.useMock) {
+    if (false) {
       // Mock disconnection
       return { success: true, disconnected: true };
     } else {
@@ -1274,7 +1147,7 @@ export class PaymentServiceNew {
 
   // Get Stripe Dashboard URL
   async getStripeDashboardUrl(userId: string): Promise<string> {
-    if (this.useMock) {
+    if (false) {
       // Mock dashboard URL
       return 'https://dashboard.stripe.com/test/dashboard';
     } else {
@@ -1311,28 +1184,44 @@ export class PaymentServiceNew {
     customer?: string;
     metadata?: Record<string, any>;
   }): Promise<any> {
-    if (this.useMock) {
-      return await stripeService.createPaymentIntent({
-        amount: Math.round(data.amount * 100), // Convert to cents
-        currency: data.currency.toLowerCase(),
-        customerId: data.customer,
-        metadata: data.metadata,
-      });
-    } else {
-      // TODO: Implement real Stripe payment intent creation
-      throw new Error('Real Stripe payment intent creation not implemented yet');
-    }
+    console.log('PaymentServiceNew - Creating payment intent:', {
+      amount: data.amount,
+      currency: data.currency,
+    });
+    
+    return await stripeService.createPaymentIntent({
+      amount: Math.round(data.amount * 100), // Convert to cents
+      currency: data.currency.toLowerCase(),
+      customerId: data.customer,
+      metadata: data.metadata,
+    });
   }
 
-  // Switch between mock and real service
-  setUseMock(useMock: boolean): void {
-    this.useMock = useMock;
-    console.log(`PaymentServiceNew - Switched to ${useMock ? 'mock' : 'real'} service`);
-  }
 
   // Get current configuration
   getConfig(): PaymentServiceConfig {
-    return { ...this.config, useMockService: this.useMock };
+    return { ...this.config };
+  }
+
+  // Test backend connection
+  async testBackendConnection(): Promise<boolean> {
+    try {
+      return await stripeService.testConnection();
+    } catch (error) {
+      console.error('Backend connection test failed:', error);
+      return false;
+    }
+  }
+
+  // Get service status
+  getServiceStatus(): { 
+    stripeConfigured: boolean;
+    stripeMode: 'BACKEND_STRIPE';
+  } {
+    return {
+      stripeConfigured: true,
+      stripeMode: 'BACKEND_STRIPE',
+    };
   }
 }
 

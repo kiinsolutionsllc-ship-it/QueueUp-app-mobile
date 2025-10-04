@@ -20,7 +20,7 @@ import { FadeIn } from '../../components/shared/Animations';
 import BiddingService from '../../services/BiddingService';
 import { hapticService } from '../../services/HapticService';
 import { formatJobType, formatVehicle } from '../../utils/UnifiedJobFormattingUtils';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { useCountdown } from '../../hooks';
 // JobAssignmentService removed - using UnifiedJobService through SimplifiedJobContext
 
@@ -75,7 +75,7 @@ const BidComparisonScreen = ({ navigation, route }: { navigation: any, route: an
       setLoading(true);
       
       // Get all customer jobs that can receive bids
-      const customerJobs = getJobsByCustomer(getFallbackUserIdWithTypeDetection(user?.id, user?.user_type));
+      const customerJobs = user?.id ? getJobsByCustomer(user.id) : [];
       const jobsThatCanReceiveBids = customerJobs.filter(job => {
         const jobBids = bids.filter(bid => bid.jobId === job.id && bid.status === 'pending');
         // Show jobs that are posted or bidding (can receive bids), regardless of whether they have bids yet
@@ -131,6 +131,24 @@ const BidComparisonScreen = ({ navigation, route }: { navigation: any, route: an
     }
   }, [user?.id, getJobsByCustomer, job]);
 
+  // Load user data when user is available
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user?.id && user?.user_type) {
+        try {
+          console.log('BidComparisonScreen - Loading user data for:', user.id, user.user_type);
+          const UnifiedJobService = require('../../services/UnifiedJobService').default;
+          await UnifiedJobService.loadUserData(user.id, user.user_type);
+          console.log('BidComparisonScreen - User data loaded successfully');
+        } catch (error) {
+          console.error('BidComparisonScreen - Error loading user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [user?.id, user?.user_type]);
+
   useEffect(() => {
     fetchJobsWithBids();
   }, [fetchJobsWithBids]);
@@ -142,6 +160,15 @@ const BidComparisonScreen = ({ navigation, route }: { navigation: any, route: an
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Load user-specific data if user is available
+    if (user?.id && user?.user_type) {
+      try {
+        const UnifiedJobService = require('../../services/UnifiedJobService').default;
+        await UnifiedJobService.refreshUserData(user.id, user.user_type);
+      } catch (error) {
+        console.error('BidComparisonScreen - Error refreshing user data:', error);
+      }
+    }
     await fetchJobsWithBids();
     setRefreshing(false);
   };
@@ -187,7 +214,7 @@ const BidComparisonScreen = ({ navigation, route }: { navigation: any, route: an
         targetUserId: bid.mechanic_id,
         targetUserName: bid.mechanic.name,
         jobId: bid.job_id,
-        currentUserId: getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+        currentUserId: user?.id,
         currentUserName: user?.name || 'Customer'
       });
     } catch (error) {
@@ -496,7 +523,7 @@ const BidComparisonScreen = ({ navigation, route }: { navigation: any, route: an
             <IconFallback name="directions-car" size={16} color={theme.textSecondary} />
             <Text style={[styles.jobDetailText, { color: theme.textSecondary }]}>
               {(() => {
-                const resolvedVehicle = resolveVehicleData(job.vehicle);
+                const resolvedVehicle = resolveVehicleData(job.vehicleId);
                 const formatted = formatVehicle(resolvedVehicle);
                 return formatted || 'Vehicle information not available';
               })()}

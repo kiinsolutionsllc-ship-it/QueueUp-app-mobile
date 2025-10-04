@@ -24,7 +24,7 @@ import { useAutoSave } from '../../hooks/useAutoSave';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { createJobStyles } from '../../styles/CreateJobScreenStyles';
 import { JobFormData, NavigationProps } from '../../types/JobTypes';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import LazyStepWrapper from '../../components/steps/LazyStepWrapper';
 import PaymentModal from '../../components/modals/PaymentModal';
 import SubcategoryModal from '../../components/modals/SubcategoryModal';
@@ -153,6 +153,24 @@ const CreateJobScreen: React.FC<CreateJobScreenProps> = ({ navigation }) => {
   });
 
   // No need to load saved data since we reset on focus
+
+  // Load user data when user is available
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user?.id && user?.user_type) {
+        try {
+          console.log('CreateJobScreen - Loading user data for:', user.id, user.user_type);
+          const UnifiedJobService = require('../../services/UnifiedJobService').default;
+          await UnifiedJobService.loadUserData(user.id, user.user_type);
+          console.log('CreateJobScreen - User data loaded successfully');
+        } catch (error) {
+          console.error('CreateJobScreen - Error loading user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [user?.id, user?.user_type]);
 
   // Update form data when images change
   useEffect(() => {
@@ -397,9 +415,15 @@ const CreateJobScreen: React.FC<CreateJobScreenProps> = ({ navigation }) => {
       // Create the job
       
       // Use the same fallback logic as CustomerJobsScreen for consistency
-      const customerId = user?.id || getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
+      const customerId = user?.id;
       console.log('CreateJobScreen - Creating job with customerId:', customerId);
       console.log('CreateJobScreen - Current user:', { id: user?.id, user_type: user?.user_type });
+      
+      console.log('🚗 CreateJobScreen - Submitting job with formData:', formData);
+      console.log('🚗 CreateJobScreen - Vehicle data:', {
+        vehicle: formData.vehicle,
+        hasVehicle: !!formData.vehicle
+      });
       
       const jobResult = await createJob({
         ...formData,
@@ -696,11 +720,9 @@ const CreateJobScreen: React.FC<CreateJobScreenProps> = ({ navigation }) => {
       <PaymentModal
         visible={modalState.isPaymentModalVisible}
         onClose={() => hideModal('isPaymentModalVisible')}
-        theme={theme as any}
         amount={10}
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
-        isProcessing={isPaymentProcessing}
       />
 
       {/* Subcategory Modal */}

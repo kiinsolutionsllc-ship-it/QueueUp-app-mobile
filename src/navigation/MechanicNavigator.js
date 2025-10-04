@@ -40,7 +40,7 @@ import PaymentHistoryScreen from '../screens/mechanic/PaymentHistoryScreen';
 import MechanicAnalyticsScreen from '../screens/mechanic/MechanicAnalyticsScreen';
 import JobHistoryScreen from '../screens/mechanic/JobHistoryScreen';
 import CustomerServiceScreen from '../screens/customer/CustomerServiceScreen';
-import StripeConnectScreen from '../screens/mechanic/StripeConnectScreen';
+// StripeConnectScreen removed - using backend integration
 import MechanicChangeOrderRequestScreen from '../screens/mechanic/MechanicChangeOrderRequestScreen';
 import JobDetailsScreen from '../screens/customer/JobDetailsScreen';
 
@@ -160,7 +160,7 @@ export default function MechanicNavigator() {
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} />
       <Stack.Screen name="JobHistory" component={JobHistoryScreen} />
       <Stack.Screen name="CustomerService" component={CustomerServiceScreen} />
-      <Stack.Screen name="StripeConnect" component={StripeConnectScreen} />
+      {/* StripeConnect screen removed - using backend integration */}
       <Stack.Screen 
         name="ChangeOrderRequest" 
         component={MechanicChangeOrderRequestScreen}

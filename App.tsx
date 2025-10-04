@@ -52,7 +52,6 @@ import { FeatureProvider } from './src/contexts/FeatureContext';
 import { VehicleProvider } from './src/contexts/VehicleContext';
 import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
 import { SupportProvider } from './src/contexts/SupportContext';
-import { QueueUpStripeProvider } from './src/providers/StripeProvider';
 import { useToast, ToastContainer } from './src/components/shared/ToastNotification';
 import EventEmitter from './src/utils/EventEmitter';
 
@@ -114,6 +113,9 @@ function AppContent(): React.JSX.Element {
           console.log('App: Supabase connection ready');
         } else {
           console.error('App: Supabase connection failed:', dbResult.error);
+          if (dbResult.fallback) {
+            console.log('App: Using fallback mode - app will work with limited functionality');
+          }
         }
       } catch (error) {
         console.error('App: Error during initialization:', error);
@@ -243,9 +245,7 @@ export default function App(): React.JSX.Element {
                                         <ReviewProvider>
                                           <NotificationProvider>
                                             <LocationProvider>
-                                              <QueueUpStripeProvider>
-                                                <AppContent />
-                                              </QueueUpStripeProvider>
+                                              <AppContent />
                                             </LocationProvider>
                                           </NotificationProvider>
                                         </ReviewProvider>

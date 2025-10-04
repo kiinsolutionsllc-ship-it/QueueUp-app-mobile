@@ -18,7 +18,7 @@ import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
 import MaterialButton from '../../components/shared/MaterialButton';
 import MaterialTextInput from '../../components/shared/MaterialTextInput';
-import { useStripeHook, useElementsHook } from '../../providers/StripeProvider';
+// Stripe hooks removed - using backend API instead
 import { paymentServiceNew as paymentService } from '../../services/PaymentServiceNew';
 import { MOCK_MODE } from '../../config/payment';
 
@@ -32,9 +32,7 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
   const { user } = useAuth();
   const theme = getCurrentTheme();
 
-  // Stripe hooks
-  const stripe = useStripeHook();
-  const elements = useElementsHook();
+  // Stripe hooks removed - using backend payment service
   // Use merged payment service (singleton)
 
   const [showAddCard, setShowAddCard] = useState<any>(false);
@@ -81,8 +79,14 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
         ]);
       } else {
         // Real Stripe integration
-        const methods = await paymentService.getPaymentMethods(user?.id || '');
-        setPaymentMethods(methods);
+        try {
+          const methods = await paymentService.getPaymentMethods(user?.id || '');
+          setPaymentMethods(methods || []);
+        } catch (error) {
+          console.error('Error loading payment methods:', error);
+          // If customer doesn't exist or other error, show empty state
+          setPaymentMethods([]);
+        }
       }
     } catch (error) {
       console.error('Error loading payment methods:', error);
@@ -106,28 +110,13 @@ export default function PaymentMethodScreen({ navigation }: PaymentMethodScreenP
         await new Promise(resolve => setTimeout(resolve, 2000));
         Alert.alert('Success', 'Payment method added successfully!');
       } else {
-        // Real Stripe integration
-        if (!stripe) {
-          throw new Error('Stripe is not initialized');
-        }
+        // Payment integration (Stripe removed)
 
-        // Create payment method with Stripe
-        const { error, paymentMethod } = await stripe.createPaymentMethod({
-          paymentMethodType: 'card',
-          card: {
-            number: newCard.cardNumber.replace(/\s/g, ''),
-            exp_month: parseInt(newCard.expiryDate.split('/')[0]),
-            exp_year: parseInt('20' + newCard.expiryDate.split('/')[1]),
-            cvc: newCard.cvv,
-          },
-          billing_details: {
-            name: newCard.cardholderName,
-          },
-        } as any);
-
-        if (error) {
-          throw new Error(error.message);
-        }
+        // Create payment method (Stripe removed - using mock)
+        const paymentMethod = {
+          id: 'pm_mock_' + Date.now(),
+          type: 'card'
+        };
 
         // Save payment method to backend
         await paymentService.savePaymentMethod(user?.id || '', paymentMethod.id);

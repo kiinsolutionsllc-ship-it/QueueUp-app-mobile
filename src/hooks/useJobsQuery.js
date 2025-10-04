@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hapticService } from '../services/HapticService';
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 
 // Supabase API service
 const jobsApi = {

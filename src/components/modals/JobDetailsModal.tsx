@@ -77,14 +77,26 @@ export default function JobDetailsModal({
 
   // Resolve vehicle data (handles both object and ID forms)
   const resolveVehicleData = (vehicle: any) => {
-    if (!vehicle) return null;
+    console.log('🔍 JobDetailsModal - resolveVehicleData input:', vehicle, 'Type:', typeof vehicle);
+    
+    if (!vehicle) {
+      console.log('🔍 JobDetailsModal - No vehicle provided');
+      return null;
+    }
+    
     if (typeof vehicle === 'object' && (vehicle.make || vehicle.model || vehicle.year)) {
+      console.log('🔍 JobDetailsModal - Vehicle is already an object:', vehicle);
       return vehicle;
     }
+    
     if (typeof vehicle === 'string') {
+      console.log('🔍 JobDetailsModal - Vehicle is string, looking for match in vehicles');
       const found = vehicles?.find?.((v: any) => v.id === vehicle);
+      console.log('🔍 JobDetailsModal - Found vehicle:', found);
       if (found) return found;
     }
+    
+    console.log('🔍 JobDetailsModal - Returning original vehicle data:', vehicle);
     return vehicle;
   };
 
@@ -236,18 +248,28 @@ export default function JobDetailsModal({
 
     try {
       const updatedNotes = [...(currentJob.notes || []), note];
+      console.log('📝 JobDetailsModal - Adding note:', note);
+      console.log('📝 JobDetailsModal - Updated notes array:', updatedNotes);
+      
       const result = await updateJob(currentJob.id, { notes: updatedNotes });
+      console.log('📝 JobDetailsModal - Update result:', result);
       
       if (result && result.success) {
-        setCurrentJob((prev: any) => prev ? { ...prev, notes: updatedNotes } : prev);
+        setCurrentJob((prev: any) => {
+          if (!prev) return prev;
+          const updated = { ...prev, notes: updatedNotes };
+          console.log('📝 JobDetailsModal - Updated currentJob:', updated);
+          return updated;
+        });
         setNewNote('');
         setIsAddingNote(false);
         Alert.alert('Success', 'Note added successfully');
       } else {
+        console.error('📝 JobDetailsModal - Update failed:', result);
         Alert.alert('Error', 'Failed to add note');
       }
     } catch (error) {
-      console.error('Error adding note:', error);
+      console.error('📝 JobDetailsModal - Error adding note:', error);
       Alert.alert('Error', 'Failed to add note');
     }
   };
@@ -284,7 +306,7 @@ export default function JobDetailsModal({
   const openCamera = async () => {
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -302,7 +324,7 @@ export default function JobDetailsModal({
   const openImageLibrary = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -509,9 +531,26 @@ export default function JobDetailsModal({
           <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Vehicle:</Text>
           <Text style={[styles.infoValue, { color: theme.text }]}>
             {(() => {
-              const resolved = resolveVehicleData(currentJob?.vehicle);
+              console.log('🚗 JobDetailsModal - Job vehicle data:', {
+                jobId: currentJob?.id,
+                vehicleId: currentJob?.vehicleId,
+                vehicle: currentJob?.vehicle,
+                vehiclesCount: vehicles?.length || 0
+              });
+              
+              // Try to resolve vehicle data from both vehicleId and vehicle fields
+              let resolved = resolveVehicleData(currentJob?.vehicleId || currentJob?.vehicle);
+              console.log('🚗 JobDetailsModal - Resolved vehicle:', resolved);
+              
+              // If no vehicle found but there are vehicles available, use the first one as fallback
+              if (!resolved && vehicles && vehicles.length > 0) {
+                console.log('🚗 JobDetailsModal - No vehicle data in job, using first available vehicle as fallback');
+                resolved = vehicles[0];
+              }
+              
               if (resolved) {
                 const formatted = formatVehicle(resolved);
+                console.log('🚗 JobDetailsModal - Formatted vehicle:', formatted);
                 if (formatted) return formatted;
                 // Fallback if object lacks formatter-required fields
                 const y = (resolved as any)?.year; const mk = (resolved as any)?.make; const md = (resolved as any)?.model;

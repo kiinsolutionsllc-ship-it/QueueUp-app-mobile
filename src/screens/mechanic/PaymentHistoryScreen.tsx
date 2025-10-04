@@ -11,7 +11,7 @@ import {
 import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import { usePayment } from '../../contexts/PaymentContext';
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialCard from '../../components/shared/MaterialCard';
@@ -40,8 +40,8 @@ export default function PaymentHistoryScreen({ navigation }: PaymentHistoryScree
     loadPayments();
   }, [loadPayments]);
 
-  const mechanicId = getFallbackUserIdWithTypeDetection(user?.id, user?.user_type);
-  const mechanicPayments = getMechanicEarnings(mechanicId, selectedPeriod);
+  const mechanicId = user?.id;
+  const mechanicPayments = mechanicId ? getMechanicEarnings(mechanicId, selectedPeriod) : [];
 
   const onRefresh = async () => {
     setRefreshing(true);

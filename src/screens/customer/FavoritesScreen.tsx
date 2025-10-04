@@ -15,7 +15,7 @@ import IconFallback from '../../components/shared/IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 import ModernHeader from '../../components/shared/ModernHeader';
 import { hapticService } from '../../services/HapticService';
 import FavoritesService from '../../services/FavoritesService';
@@ -48,7 +48,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
     try {
       setIsLoading(true);
       await FavoritesService.initialize();
-      const customerFavorites = FavoritesService.getCustomerFavorites(getFallbackUserIdWithTypeDetection(user?.id, user?.user_type));
+      const customerFavorites = FavoritesService.getCustomerFavorites(user?.id);
       setFavorites(customerFavorites);
     } catch (error) {
       console.error('Failed to load favorites:', error);
@@ -127,7 +127,7 @@ export default function FavoritesScreen({ navigation }: FavoritesScreenProps) {
             style: 'destructive',
             onPress: async () => {
               const result = await FavoritesService.removeFromFavorites(
-                getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+                user?.id,
                 mechanicId
               );
               

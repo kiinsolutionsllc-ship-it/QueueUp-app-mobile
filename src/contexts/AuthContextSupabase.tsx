@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import uniqueIdGenerator from '../utils/UniqueIdGenerator';
 import MechanicAvailabilityService from '../services/MechanicAvailabilityService';
 import { SupabaseAuthService } from '../services/SupabaseAuthService';
-import { supabase } from '../config/supabaseConfig';
+import { supabase } from '../config/supabase';
 import { AutoLoginService } from '../services/AutoLoginService';
 
 export interface User {
@@ -249,7 +249,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
       
-      const result = await SupabaseAuthService.signIn(email, password);
+      const result = await SupabaseAuthService.signIn(email, password, userType);
       
       if (result.success && result.user) {
         setUser(result.user);
@@ -290,14 +290,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
       }
 
-      // Generate a unique user ID
-      const userId = userType === 'customer' 
-        ? uniqueIdGenerator.generateCustomerId()
-        : uniqueIdGenerator.generateMechanicId();
-
       const result = await SupabaseAuthService.signUp(email, password, {
         ...userData,
-        id: userId,
+        user_type: userType,
       });
       
       if (result.success) {
@@ -310,7 +305,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             phone: userData.phone,
             avatar: userData.avatar,
             location: userData.location,
-            id: userId,
             created_at: new Date().toISOString(),
           };
           

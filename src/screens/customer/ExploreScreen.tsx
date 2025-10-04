@@ -17,7 +17,7 @@ import * as Location from 'expo-location';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { getFallbackUserIdWithTypeDetection } from '../../utils/UserIdUtils';
+// Removed UserIdUtils import - now using real user IDs from Supabase
 // MockDataService removed - no mock data
 import ModernHeader from '../../components/shared/ModernHeader';
 import MaterialButton from '../../components/shared/MaterialButton';
@@ -729,7 +729,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
   const loadFavorites = async () => {
     try {
       await FavoritesService.initialize();
-      const customerFavorites = FavoritesService.getCustomerFavorites(getFallbackUserIdWithTypeDetection(user?.id, user?.user_type));
+      const customerFavorites = FavoritesService.getCustomerFavorites(user?.id);
       setFavorites(customerFavorites);
     } catch (error) {
       console.error('Failed to load favorites:', error);
@@ -770,7 +770,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const result = await FavoritesService.toggleFavorite(
-        getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+        user?.id,
         mechanic
       );
 
@@ -1354,7 +1354,7 @@ export default function ExploreScreen({ navigation }: ExploreScreenProps) {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       // Navigate to messaging screen with mechanic context
                       navigation.navigate('Messaging', { 
-                        mechanicId: mechanic.id || getFallbackUserIdWithTypeDetection(user?.id, user?.user_type),
+                        mechanicId: mechanic.id || user?.id,
                         mechanicName: mechanic.name || 'Mechanic'
                       });
                     }}

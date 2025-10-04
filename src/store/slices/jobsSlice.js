@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { hapticService } from '../../services/HapticService';
-import { safeSupabase, TABLES } from '../../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../../config/supabase';
 
 // Supabase jobs service
 const jobsService = {

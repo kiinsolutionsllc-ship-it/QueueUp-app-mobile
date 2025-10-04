@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import IconFallback from './IconFallback';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContextSupabase';
+import { useVehicle } from '../../contexts/VehicleContext';
 import { designTokens } from '../../design-system/DesignSystem';
 import { useJobDetails } from '../../hooks/useJobDetails';
 import {
@@ -451,7 +452,29 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   
   const { getCurrentTheme } = useTheme();
   const { user } = useAuth();
+  const { vehicles } = useVehicle();
   const theme = getCurrentTheme();
+
+  // Helper function to resolve vehicle data
+  const resolveVehicleData = (vehicle: any) => {
+    if (!vehicle) return null;
+    
+    // If it's already an object with make/model/year, return it
+    if (typeof vehicle === 'object' && vehicle.make && vehicle.model) {
+      return vehicle;
+    }
+    
+    // If it's a string that looks like a vehicle ID, try to find the full vehicle object
+    if (typeof vehicle === 'string' && /^\d{13,}$/.test(vehicle)) {
+      const fullVehicle = vehicles.find(v => v.id === vehicle);
+      if (fullVehicle) {
+        return fullVehicle;
+      }
+    }
+    
+    // Return the original vehicle data
+    return vehicle;
+  };
 
   // State management
   const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'notes'>('details');
@@ -555,7 +578,7 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   );
 
   const memoizedVehicle = useMemo(() => 
-    job && job.vehicle ? formatVehicle(job.vehicle) : '', 
+    job && job.vehicleId ? formatVehicle(resolveVehicleData(job.vehicleId)) : '', 
     [job, formatVehicle]
   );
 
@@ -620,7 +643,7 @@ const UnifiedJobDetailsModal: React.FC<JobDetailsModalProps> = memo(({
   }, [job?.notes, formatDate, formatTime]);
 
   const memoizedVehicleInfo = useMemo(() => 
-    job ? formatVehicle(job.vehicle || '') : 'N/A', 
+    job ? formatVehicle(resolveVehicleData(job.vehicleId) || '') : 'N/A', 
     [job, formatVehicle]
   );
 

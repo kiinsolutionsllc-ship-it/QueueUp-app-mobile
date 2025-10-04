@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { MOCK_MODE } from '../config/payment';
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 
 /**
  * UNIFIED LOCATION SERVICE

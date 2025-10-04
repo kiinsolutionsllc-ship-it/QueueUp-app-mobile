@@ -10,6 +10,9 @@ import locationService from '../../services/LocationService';
 
 // Enhanced styles with yellow theme integration
 const additionalStyles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
   },

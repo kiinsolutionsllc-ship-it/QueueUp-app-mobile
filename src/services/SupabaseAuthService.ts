@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabaseConfig';
+import { supabase } from '../config/supabase';
 import { User } from '../contexts/AuthContextSupabase';
 
 export interface SignUpResult {
@@ -49,7 +49,7 @@ export class SupabaseAuthService {
         return false;
       }
 
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase!.auth.getSession();
       
       if (error) {
         console.error('Error checking authentication:', error);
@@ -75,7 +75,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase!.auth.getUser();
       
       if (error) {
         return {
@@ -139,15 +139,23 @@ export class SupabaseAuthService {
         };
       }
 
-      console.log('Supabase Auth: Starting signup for:', email);
+      // Validate user_type is provided and valid
+      if (!userData.user_type || !['customer', 'mechanic'].includes(userData.user_type)) {
+        return {
+          success: false,
+          error: 'User type must be specified (customer or mechanic)'
+        };
+      }
 
-      const { data, error } = await supabase.auth.signUp({
+      console.log('Supabase Auth: Starting signup for:', email, 'as', userData.user_type);
+
+      const { data, error } = await supabase!.auth.signUp({
         email,
         password,
         options: {
           data: {
             name: userData.name || email.split('@')[0],
-            user_type: userData.user_type || 'customer',
+            user_type: userData.user_type, // This gets stored in auth.users.raw_user_meta_data
             phone: userData.phone,
             avatar: userData.avatar,
             location: userData.location,
@@ -206,9 +214,13 @@ export class SupabaseAuthService {
   }
 
   /**
-   * Sign in an existing user
+   * Sign in an existing user with user type validation
    */
-  static async signIn(email: string, password: string): Promise<SignInResult> {
+  static async signIn(
+    email: string, 
+    password: string, 
+    expectedUserType: 'customer' | 'mechanic'
+  ): Promise<SignInResult> {
     try {
       if (!this.isConfigured()) {
         return {
@@ -217,9 +229,9 @@ export class SupabaseAuthService {
         };
       }
 
-      console.log('Supabase Auth: Starting signin for:', email);
+      console.log('Supabase Auth: Starting signin for:', email, 'expecting type:', expectedUserType);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase!.auth.signInWithPassword({
         email,
         password
       });
@@ -233,8 +245,21 @@ export class SupabaseAuthService {
       }
 
       if (data.user && data.session) {
+        const actualUserType = data.user.user_metadata?.user_type;
+        
+        // Check if user type matches expected type
+        if (actualUserType !== expectedUserType) {
+          // Sign out the user immediately
+          await supabase!.auth.signOut();
+          
+          return {
+            success: false,
+            error: `This account is registered as a ${actualUserType}. Please use the ${actualUserType} login.`
+          };
+        }
+
         const appUser: User = {
-          id: data.user.id,
+          id: data.user.id, // Use Supabase UUID
           email: data.user.email || '',
           name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
           phone: data.user.user_metadata?.phone || '',
@@ -283,7 +308,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase!.auth.signOut();
       
       if (error) {
         console.error('Supabase signout error:', error);
@@ -315,7 +340,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.resend({
+      const { error } = await supabase!.auth.resend({
         type: 'signup',
         email
       });
@@ -349,7 +374,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase!.auth.verifyOtp({
         email,
         token,
         type: 'signup'
@@ -384,7 +409,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase!.auth.resetPasswordForEmail(email);
 
       if (error) {
         return {
@@ -415,7 +440,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.verifyOtp({
+      const { error } = await supabase!.auth.verifyOtp({
         email,
         token,
         type: 'recovery'
@@ -429,7 +454,7 @@ export class SupabaseAuthService {
       }
 
       // Update password
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error: updateError } = await supabase!.auth.updateUser({
         password: newPassword
       });
 
@@ -462,7 +487,7 @@ export class SupabaseAuthService {
         };
       }
 
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await supabase!.auth.updateUser({
         data: {
           name: updates.name,
           phone: updates.phone,

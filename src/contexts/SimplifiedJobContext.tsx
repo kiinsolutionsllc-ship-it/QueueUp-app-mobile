@@ -244,9 +244,12 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
   };
 
   const getAvailableJobs = (): Job[] => {
-    return jobs.filter(job => {
-      // Only show jobs that are in bidding phase
-      const isBiddingPhase = job.status === 'posted' || job.status === 'bidding';
+    console.log('🔍 getAvailableJobs: Total jobs in context:', jobs.length);
+    console.log('🔍 getAvailableJobs: All jobs:', jobs.map(j => ({ id: j.id, status: j.status, title: j.title })));
+    
+    const availableJobs = jobs.filter(job => {
+      // Show jobs that are in bidding phase (posted, pending, or bidding status)
+      const isBiddingPhase = ['posted', 'pending', 'bidding'].includes(job.status);
       
       // Exclude jobs that have been accepted or are in progress
       const isNotAccepted = !['accepted', 'scheduled', 'confirmed', 'in_progress', 'started', 'completed', 'cancelled'].includes(job.status);
@@ -254,16 +257,35 @@ export const JobProvider: React.FC<JobProviderProps> = ({ children }) => {
       // Exclude jobs that already have an assigned mechanic
       const hasNoAssignedMechanic = !job.assignedMechanicId && !job.selectedMechanicId;
       
-      return isBiddingPhase && isNotAccepted && hasNoAssignedMechanic;
+      const shouldShow = isBiddingPhase && isNotAccepted && hasNoAssignedMechanic;
+      
+      // Debug logging for each job
+      console.log(`🔍 Job ${job.id}:`, {
+        status: job.status,
+        title: job.title,
+        isBiddingPhase,
+        isNotAccepted,
+        hasNoAssignedMechanic,
+        assignedMechanicId: job.assignedMechanicId,
+        selectedMechanicId: job.selectedMechanicId,
+        shouldShow
+      });
+      
+      return shouldShow;
     });
+    
+    console.log('🔍 getAvailableJobs: Filtered available jobs:', availableJobs.length);
+    console.log('🔍 getAvailableJobs: Available job IDs:', availableJobs.map(j => j.id));
+    
+    return availableJobs;
   };
 
   // Check if a specific job is available for bidding
   const isJobAvailableForBidding = (job: Job): boolean => {
     if (!job) return false;
     
-    // Only jobs in bidding phase are available
-    const isBiddingPhase = job.status === 'posted' || job.status === 'bidding';
+    // Show jobs that are in bidding phase (posted, pending, or bidding status)
+    const isBiddingPhase = ['posted', 'pending', 'bidding'].includes(job.status);
     
     // Exclude jobs that have been accepted or are in progress
     const isNotAccepted = !['accepted', 'scheduled', 'confirmed', 'in_progress', 'started', 'completed', 'cancelled'].includes(job.status);

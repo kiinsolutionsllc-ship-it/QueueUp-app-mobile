@@ -1,7 +1,7 @@
 // Mechanic Service
 // Provides mechanic data for the app using Supabase
 
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 
 class MechanicService {
   constructor() {

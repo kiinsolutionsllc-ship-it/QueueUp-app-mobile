@@ -1,7 +1,7 @@
 // Enhanced Notification Service
 // Handles all notification operations for job updates and system events
 // Uses Supabase for data storage and Firebase for push notifications
-import { safeSupabase, TABLES } from '../config/supabaseConfig';
+import { safeSupabase, TABLES } from '../config/supabase';
 import PushNotificationService from './PushNotificationService';
 import EmailSmsNotificationService from './EmailSmsNotificationService';
 

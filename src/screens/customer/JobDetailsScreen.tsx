@@ -118,7 +118,7 @@ const JobDetailsScreen: React.FC<JobDetailsScreenProps> = ({ navigation, route }
             jobTitle: job.title,
             mechanicName: job.mechanicName,
             customerName: user?.name || 'Customer',
-            vehicleInfo: job.vehicle ? formatVehicle(resolveVehicleData(job.vehicle)) : 'Unknown Vehicle',
+            vehicleInfo: job.vehicleId ? formatVehicle(resolveVehicleData(job.vehicleId)) : 'Unknown Vehicle',
             priority: job.urgency || 'medium',
           },
         };
@@ -227,7 +227,7 @@ const JobDetailsScreen: React.FC<JobDetailsScreenProps> = ({ navigation, route }
     );
   }
 
-  const resolvedVehicle = resolveVehicleData(job.vehicle);
+  const resolvedVehicle = resolveVehicleData(job.vehicleId);
   const formattedVehicle = formatVehicle(resolvedVehicle);
 
   return (
